@@ -213,3 +213,43 @@ CREATE TABLE IF NOT EXISTS applications (
 ) ENGINE=InnoDB
   DEFAULT CHARSET=utf8mb4
   COLLATE=utf8mb4_unicode_ci;
+
+
+-- Optional public-facing profile details. Existing student and application records stay intact.
+CREATE TABLE IF NOT EXISTS student_profiles (
+  student_id BIGINT UNSIGNED NOT NULL,
+  headline VARCHAR(180) NULL,
+  about TEXT NULL,
+  location VARCHAR(160) NULL,
+  avatar_url VARCHAR(500) NULL,
+  cover_image_url VARCHAR(500) NULL,
+  linkedin_url VARCHAR(500) NULL,
+  github_url VARCHAR(500) NULL,
+  portfolio_url VARCHAR(500) NULL,
+  projects TEXT NULL,
+  achievements TEXT NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (student_id),
+  CONSTRAINT fk_student_profiles_student FOREIGN KEY (student_id) REFERENCES students (student_id)
+    ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- A directional row stores a pending invite or an accepted student connection.
+CREATE TABLE IF NOT EXISTS student_connections (
+  connection_id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  requester_student_id BIGINT UNSIGNED NOT NULL,
+  recipient_student_id BIGINT UNSIGNED NOT NULL,
+  status ENUM('PENDING', 'ACCEPTED') NOT NULL DEFAULT 'PENDING',
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (connection_id),
+  UNIQUE KEY uk_student_connections_pair (requester_student_id, recipient_student_id),
+  KEY idx_student_connections_recipient (recipient_student_id, status),
+  KEY idx_student_connections_requester (requester_student_id, status),
+  CONSTRAINT chk_student_connections_not_self CHECK (requester_student_id <> recipient_student_id),
+  CONSTRAINT fk_student_connections_requester FOREIGN KEY (requester_student_id) REFERENCES students (student_id)
+    ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT fk_student_connections_recipient FOREIGN KEY (recipient_student_id) REFERENCES students (student_id)
+    ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
