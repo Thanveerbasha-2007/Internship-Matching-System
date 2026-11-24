@@ -96,7 +96,7 @@ npm run dev
 
 Open `http://localhost:5173`. Vite proxies `/api` requests to `http://localhost:8080` during local development.
 
-For production, set `VITE_API_BASE_URL` to the public backend URL before building the frontend.
+For the single-origin production deployment, leave `VITE_API_BASE_URL` empty: the React application calls `/api` on the same host as Spring Boot.
 
 ## API documentation
 
@@ -104,7 +104,7 @@ See [documentation/api-reference.md](documentation/api-reference.md).
 
 ## Deployment
 
-See [documentation/deployment-guide.md](documentation/deployment-guide.md) for the Vercel + Railway deployment configuration and verification steps.
+See [documentation/deployment-guide.md](documentation/deployment-guide.md) for the Railway deployment configuration and verification steps.
 
 ## Database documentation
 
@@ -121,12 +121,12 @@ View runs in the repository's **Actions** tab.
 
 ## Deployment architecture
 
-The intended deployment architecture is:
-- React frontend: Vercel
-- Spring Boot API: Railway
-- MySQL database: Railway MySQL service
+The deployment architecture is:
+- React frontend: built with Vite and served as static assets by Spring Boot.
+- Spring Boot API: Railway service.
+- MySQL database: private Railway MySQL service.
 
-Production deployment still requires connecting the hosting projects, setting environment variables, configuring the database and CORS origin, and testing the public URLs.
+The root `Dockerfile` builds both frontend and backend into one container. The React app calls `/api` on the same public domain, avoiding cross-origin configuration.
 
 ## Security and data note
 
@@ -141,4 +141,4 @@ The current app is a prototype and does not yet have sign-in, authentication, or
 
 ## Project status
 
-Prototype implementation in progress. The database, backend REST API, and initial React interface are in the repository. Hosting and production security hardening are still outstanding.
+Prototype implementation in progress. The database schema, backend REST API, initial React interface, and combined production Docker build are in the repository. Authentication and production security hardening are still outstanding.
