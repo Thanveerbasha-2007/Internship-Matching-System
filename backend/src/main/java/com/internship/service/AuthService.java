@@ -77,7 +77,13 @@ public class AuthService {
     }
 
     @Transactional
-    public StudentResponse loginWithGoogle(String credential, HttpSession session) {
+    public StudentResponse loginWithGoogle(
+        String credential,
+        String department,
+        Integer graduationYear,
+        Set<Long> skillIds,
+        HttpSession session
+    ) {
         String clientId = googleClientId == null ? "" : googleClientId.trim();
         if (clientId.isEmpty()) {
             throw new ResponseStatusException(
@@ -130,9 +136,9 @@ public class AuthService {
             StudentResponse created = students.create(new StudentCreateRequest(
                 displayName,
                 email,
-                null,
-                null,
-                Set.of()
+                department,
+                graduationYear,
+                skillIds == null ? Set.of() : skillIds
             ));
             studentId = created.studentId();
         } else {
