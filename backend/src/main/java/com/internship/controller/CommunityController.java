@@ -1,7 +1,7 @@
 package com.internship.controller;
 
 import com.internship.dto.CommunityCommentResponse;
-import com.internship.dto.CommunityPostResponse;
+import com.internship.dto.CommunityPostResponse;\nimport com.internship.dto.CommunityStudentProfileResponse;
 import com.internship.dto.CreateCommunityCommentRequest;
 import com.internship.dto.CreateCommunityPostRequest;
 import com.internship.dto.ReportCommunityPostRequest;
@@ -22,6 +22,14 @@ public class CommunityController {
 
     public CommunityController(CommunityService community) {
         this.community = community;
+    }
+
+    @GetMapping("/students/{studentId}")
+    public CommunityStudentProfileResponse studentProfile(
+        @PathVariable Long studentId,
+        HttpSession session
+    ) {
+        return community.findStudentProfile(studentId, currentStudentId(session));
     }
 
     @GetMapping("/posts")
