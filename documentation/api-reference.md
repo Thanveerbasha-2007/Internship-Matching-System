@@ -107,6 +107,33 @@ A profile contains:
 - `graduationYear`
 - `skills`
 
+### `PUT /api/students/{studentId}`
+
+Updates the signed-in student's own profile. Email and student ID are not editable through this endpoint. The request replaces the current skill list with the supplied `skillIds`.
+
+```json
+{
+  "fullName": "Aarav Sharma",
+  "department": "Computer Science",
+  "graduationYear": 2028,
+  "skillIds": [1, 2, 4]
+}
+```
+
+### `GET /api/students/{studentId}/saved-internships`
+
+Returns the internship IDs saved by the signed-in student, most recently saved first.
+
+### `POST /api/students/{studentId}/saved-internships/{internshipId}`
+
+Saves the internship to the student's shortlist. Repeating the request is safe and does not create duplicate rows.
+
+### `DELETE /api/students/{studentId}/saved-internships/{internshipId}`
+
+Removes the internship from the student's saved list.
+
+All profile and saved-internship routes require the matching student's session. Accessing another student's ID returns `403 Forbidden`.
+
 ## Internships
 
 These read-only opportunity endpoints are public.
