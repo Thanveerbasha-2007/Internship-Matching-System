@@ -1,0 +1,115 @@
+-- Internship Matching System
+-- Initial MySQL schema (MySQL 8.0+)
+-- This schema supports student profiles, internship listings,
+-- skill associations, and applications.
+
+CREATE DATABASE IF NOT EXISTS internship_matching
+  CHARACTER SET utf8mb4
+  COLLATE utf8mb4_unicode_ci;
+
+USE internship_matching;
+
+CREATE TABLE IF NOT EXISTS students (
+  student_id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  full_name VARCHAR(120) NOT NULL,
+  email VARCHAR(255) NOT NULL,
+  department VARCHAR(120) NULL,
+  graduation_year SMALLINT UNSIGNED NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+    ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (student_id),
+  UNIQUE KEY uk_students_email (email)
+) ENGINE=InnoDB
+  DEFAULT CHARSET=utf8mb4
+  COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS skills (
+  skill_id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  skill_name VARCHAR(100) NOT NULL,
+  category VARCHAR(100) NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (skill_id),
+  UNIQUE KEY uk_skills_name (skill_name)
+) ENGINE=InnoDB
+  DEFAULT CHARSET=utf8mb4
+  COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS student_skills (
+  student_id BIGINT UNSIGNED NOT NULL,
+  skill_id BIGINT UNSIGNED NOT NULL,
+  added_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (student_id, skill_id),
+  KEY idx_student_skills_skill_id (skill_id),
+  CONSTRAINT fk_student_skills_student
+    FOREIGN KEY (student_id) REFERENCES students (student_id)
+    ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT fk_student_skills_skill
+    FOREIGN KEY (skill_id) REFERENCES skills (skill_id)
+    ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB
+  DEFAULT CHARSET=utf8mb4
+  COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS internships (
+  internship_id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  title VARCHAR(180) NOT NULL,
+  company_name VARCHAR(180) NOT NULL,
+  description TEXT NULL,
+  location VARCHAR(180) NULL,
+  work_mode ENUM('ONSITE', 'REMOTE', 'HYBRID') NOT NULL DEFAULT 'ONSITE',
+  duration_weeks SMALLINT UNSIGNED NULL,
+  stipend_amount DECIMAL(10, 2) NULL,
+  application_deadline DATE NULL,
+  status ENUM('OPEN', 'CLOSED') NOT NULL DEFAULT 'OPEN',
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+    ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (internship_id),
+  KEY idx_internships_status_deadline (status, application_deadline)
+) ENGINE=InnoDB
+  DEFAULT CHARSET=utf8mb4
+  COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS internship_skills (
+  internship_id BIGINT UNSIGNED NOT NULL,
+  skill_id BIGINT UNSIGNED NOT NULL,
+  PRIMARY KEY (internship_id, skill_id),
+  KEY idx_internship_skills_skill_id (skill_id),
+  CONSTRAINT fk_internship_skills_internship
+    FOREIGN KEY (internship_id) REFERENCES internships (internship_id)
+    ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT fk_internship_skills_skill
+    FOREIGN KEY (skill_id) REFERENCES skills (skill_id)
+    ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB
+  DEFAULT CHARSET=utf8mb4
+  COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS applications (
+  application_id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  student_id BIGINT UNSIGNED NOT NULL,
+  internship_id BIGINT UNSIGNED NOT NULL,
+  status ENUM(
+    'APPLIED',
+    'UNDER_REVIEW',
+    'SHORTLISTED',
+    'REJECTED',
+    'ACCEPTED',
+    'WITHDRAWN'
+  ) NOT NULL DEFAULT 'APPLIED',
+  applied_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+    ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (application_id),
+  UNIQUE KEY uk_applications_student_internship (student_id, internship_id),
+  KEY idx_applications_internship_id (internship_id),
+  CONSTRAINT fk_applications_student
+    FOREIGN KEY (student_id) REFERENCES students (student_id)
+    ON DELETE RESTRICT ON UPDATE CASCADE,
+  CONSTRAINT fk_applications_internship
+    FOREIGN KEY (internship_id) REFERENCES internships (internship_id)
+    ON DELETE RESTRICT ON UPDATE CASCADE
+) ENGINE=InnoDB
+  DEFAULT CHARSET=utf8mb4
+  COLLATE=utf8mb4_unicode_ci;
