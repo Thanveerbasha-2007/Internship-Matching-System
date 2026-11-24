@@ -174,6 +174,27 @@ jobs:
           jq -e '.relationshipStatus == "CONNECTED"' /tmp/connection-accepted.json
           curl --fail --silent --cookie /tmp/student-network.cookies http://127.0.0.1:8080/api/network | jq -e '.connectionCount == 1 and (.connections | length) == 1'
 
+          follow_status=$(curl --silent --cookie /tmp/student-network.cookies --output /tmp/follow-response.json --write-out "%{http_code}" \
+            --request POST "http://127.0.0.1:8080/api/network/$regular_student_id/follow")
+          test "$follow_status" = "200"
+          jq -e '.following == true' /tmp/follow-response.json
+
+          duplicate_follow_status=$(curl --silent --cookie /tmp/student-network.cookies --output /tmp/follow-duplicate.json --write-out "%{http_code}" \
+            --request POST "http://127.0.0.1:8080/api/network/$regular_student_id/follow")
+          test "$duplicate_follow_status" = "200"
+          curl --fail --silent --cookie /tmp/student-network.cookies "http://127.0.0.1:8080/api/community/students/$regular_student_id" | jq -e '.followerCount == 1 and .followedByMe == true'
+          curl --fail --silent --cookie /tmp/student-network.cookies http://127.0.0.1:8080/api/network | jq -e --argjson id "$regular_student_id" 'any(.connections[]; .studentId == $id and .followerCount == 1 and .followedByMe == true)'
+
+          self_follow_status=$(curl --silent --cookie /tmp/student-network.cookies --output /tmp/self-follow.json --write-out "%{http_code}" \
+            --request POST "http://127.0.0.1:8080/api/network/$student_id/follow")
+          test "$self_follow_status" = "400"
+
+          unfollow_status=$(curl --silent --cookie /tmp/student-network.cookies --output /tmp/unfollow-response.json --write-out "%{http_code}" \
+            --request DELETE "http://127.0.0.1:8080/api/network/$regular_student_id/follow")
+          test "$unfollow_status" = "200"
+          jq -e '.following == false' /tmp/unfollow-response.json
+          curl --fail --silent --cookie /tmp/student-network.cookies "http://127.0.0.1:8080/api/community/students/$regular_student_id" | jq -e '.followerCount == 0 and .followedByMe == false'
+
           regular_admin_status=$(curl --silent --cookie /tmp/regular-student.cookies --output /tmp/regular-admin.json --write-out "%{http_code}" http://127.0.0.1:8080/api/admin/overview)
           test "$regular_admin_status" = "403"
 
