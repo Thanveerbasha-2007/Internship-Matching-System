@@ -194,7 +194,53 @@ function AuthPanel({ skills, mode, setMode, onSubmit, onGoogleCredential, google
   );
 }
 
-function InternshipCard({ internship, onApply, onDetails, applied, applying }) {
+
+function ProfileEditor({ student, skills, onCancel, onSave, busy, error }) {
+  const [fullName, setFullName] = useState(student.fullName || "");
+  const [department, setDepartment] = useState(student.department || "");
+  const [graduationYear, setGraduationYear] = useState(student.graduationYear || "");
+  const [selectedSkills, setSelectedSkills] = useState(
+    skills.filter((skill) => (student.skills || []).includes(skill.skillName)).map((skill) => skill.skillId)
+  );
+
+  function toggleSkill(id) {
+    setSelectedSkills((current) => current.includes(id)
+      ? current.filter((value) => value !== id)
+      : [...current, id]);
+  }
+
+  function submit(event) {
+    event.preventDefault();
+    onSave({
+      fullName: fullName.trim(),
+      department: department.trim(),
+      graduationYear: graduationYear ? Number(graduationYear) : null,
+      skillIds: selectedSkills,
+    });
+  }
+
+  return (
+    <form className="profile-card profile-edit-card" onSubmit={submit}>
+      <div className="profile-banner"/>
+      <div className="profile-content">
+        <span className="profile-label">EDIT YOUR STUDENT PROFILE</span>
+        <h3>Keep your details current</h3>
+        <p>Your selected skills are used to calculate internship matches.</p>
+        <label className="profile-edit-field">Full name<input required maxLength="120" value={fullName} onChange={(event) => setFullName(event.target.value)}/></label>
+        <label className="profile-edit-field">Department<input maxLength="120" value={department} onChange={(event) => setDepartment(event.target.value)} placeholder="e.g. Computer Science"/></label>
+        <label className="profile-edit-field">Graduation year<input type="number" min="2020" max="2100" value={graduationYear} onChange={(event) => setGraduationYear(event.target.value)} placeholder="2027"/></label>
+        <span className="profile-label profile-label-spaced">YOUR SKILLS</span>
+        <div className="profile-edit-skills">
+          {skills.map((skill) => <label key={skill.skillId} className="profile-edit-skill"><input type="checkbox" checked={selectedSkills.includes(skill.skillId)} onChange={() => toggleSkill(skill.skillId)}/>{skill.skillName}</label>)}
+        </div>
+        {error && <div className="auth-error" role="alert">{error}</div>}
+        <div className="profile-edit-actions"><button type="button" className="button button-outline" onClick={onCancel}>Cancel</button><button type="submit" className="button button-dark" disabled={busy}>{busy ? "Saving…" : "Save profile"}</button></div>
+      </div>
+    </form>
+  );
+}
+
+function InternshipCard({ internship, onApply, onDetails, onToggleSave, isSaved, applied, applying }) {
   const score = Number(internship.matchScore ?? 0);
   const matched = internship.matchedSkills || [];
   const required = internship.requiredSkills || [];
@@ -226,6 +272,7 @@ function InternshipCard({ internship, onApply, onDetails, applied, applying }) {
       <div className="card-bottom">
         <div><strong>{formatStipend(internship.stipendAmount)}</strong><small>{formatDeadline(internship.applicationDeadline)}</small></div>
         <div className="card-actions">
+          <button className={isSaved ? "button button-saved" : "button button-outline"} onClick={() => onToggleSave(internship)}>{isSaved ? "Saved" : "Save"}</button>
           <button className="button button-outline" onClick={() => onDetails(internship)}>Details</button>
           <button className={applied ? "button button-applied" : "button button-dark"} onClick={() => onApply(internship)} disabled={applied || applying}>
             {applied ? "Applied" : applying ? "Applying…" : "Apply"} {!applied && <Icon name="arrow" size={15}/>}
@@ -236,7 +283,7 @@ function InternshipCard({ internship, onApply, onDetails, applied, applying }) {
   );
 }
 
-function InternshipDetails({ internship, onClose, onApply, applied, applying }) {
+function InternshipDetails({ internship, onClose, onApply, onToggleSave, isSaved, applied, applying }) {
   if (!internship) return null;
   const required = internship.requiredSkills || [];
   const matched = internship.matchedSkills || [];
@@ -261,7 +308,7 @@ function InternshipDetails({ internship, onClose, onApply, applied, applying }) 
           <div className="skill-list">{required.length ? required.map((skill) => <span className={matched.some((item) => item.toLowerCase() === skill.toLowerCase()) ? "skill-chip matched" : "skill-chip"} key={skill}>{matched.some((item) => item.toLowerCase() === skill.toLowerCase()) && <Icon name="check" size={11}/>} {skill}</span>) : <span className="details-muted">No required skills listed.</span>}</div>
           <div className="skills-explainer"><span><i className="legend-dot matched-dot"/> You have: {matched.length ? matched.join(", ") : "No matching skills yet"}</span><span><i className="legend-dot missing-dot"/> To develop: {missing.length ? missing.join(", ") : "None"}</span></div>
         </div>
-        <div className="details-footer"><span>Match score is calculated from required skill overlap.</span><button className="button button-dark" disabled={applied || applying} onClick={() => onApply(internship)}>{applied ? "Already applied" : applying ? "Applying…" : "Apply for this internship"} <Icon name="arrow" size={15}/></button></div>
+        <div className="details-footer"><span>Match score is calculated from required skill overlap.</span><div className="details-footer-actions"><button className={isSaved ? "button button-saved" : "button button-outline"} onClick={() => onToggleSave(internship)}>{isSaved ? "Saved" : "Save for later"}</button><button className="button button-dark" disabled={applied || applying} onClick={() => onApply(internship)}>{applied ? "Already applied" : applying ? "Applying…" : "Apply for this internship"} <Icon name="arrow" size={15}/></button></div></div>
       </section>
     </div>
   );
@@ -273,7 +320,15 @@ export default function App() {
   const [internships, setInternships] = useState([]);
   const [skills, setSkills] = useState([]);
   const [recommendations, setRecommendations] = useState([]);
+  const [savedInternshipIds, setSavedInternshipIds] = useState([]);
   const [tab, setTab] = useState("discover");
+  const [sortBy, setSortBy] = useState("match");
+  const [stipendFilter, setStipendFilter] = useState("all");
+  const [durationFilter, setDurationFilter] = useState("all");
+  const [applicationFilter, setApplicationFilter] = useState("all");
+  const [editingProfile, setEditingProfile] = useState(false);
+  const [profileBusy, setProfileBusy] = useState(false);
+  const [profileError, setProfileError] = useState("");
   const [authMode, setAuthMode] = useState("login");
   const [authBusy, setAuthBusy] = useState(false);
   const [authError, setAuthError] = useState("");
@@ -354,6 +409,24 @@ export default function App() {
     return () => { active = false; };
   }, [tab, apiOnline, currentStudent]);
 
+  useEffect(() => {
+    let active = true;
+    async function loadSavedInternships() {
+      if (!currentStudent || !apiOnline) {
+        setSavedInternshipIds([]);
+        return;
+      }
+      try {
+        const ids = await api(`/api/students/${currentStudent.studentId}/saved-internships`);
+        if (active) setSavedInternshipIds(ids);
+      } catch (error) {
+        if (active) setNotice(error.message);
+      }
+    }
+    loadSavedInternships();
+    return () => { active = false; };
+  }, [apiOnline, currentStudent]);
+
   async function handleAuth(mode, formData) {
     setAuthBusy(true);
     setAuthError("");
@@ -390,24 +463,104 @@ export default function App() {
     }
   }
 
+  async function handleToggleSave(internship) {
+    if (!currentStudent || !apiOnline) return;
+    const internshipId = internship.internshipId;
+    const alreadySaved = savedInternshipIds.includes(internshipId);
+    try {
+      await api(`/api/students/${currentStudent.studentId}/saved-internships/${internshipId}`, {
+        method: alreadySaved ? "DELETE" : "POST",
+      });
+      setSavedInternshipIds((current) => alreadySaved
+        ? current.filter((id) => id !== internshipId)
+        : [...current, internshipId]);
+      setNotice(alreadySaved ? "Internship removed from your saved list." : "Internship saved for later.");
+    } catch (error) {
+      setNotice(error.message);
+    }
+  }
+
+  async function handleUpdateProfile(profile) {
+    setProfileBusy(true);
+    setProfileError("");
+    try {
+      const student = await api(`/api/students/${currentStudent.studentId}`, {
+        method: "PUT",
+        body: JSON.stringify(profile),
+      });
+      setCurrentStudent(student);
+      setEditingProfile(false);
+      setNotice("Your student profile has been updated. Recommendations are being refreshed.");
+    } catch (error) {
+      setProfileError(error.message);
+    } finally {
+      setProfileBusy(false);
+    }
+  }
+
   async function handleLogout() {
     try { await api("/api/auth/logout", { method: "POST" }); } catch { /* Clear local state even if the session expired. */ }
     setCurrentStudent(null);
     setRecommendations([]);
     setApplications([]);
+    setSavedInternshipIds([]);
+    setEditingProfile(false);
     setTab("discover");
     setNotice("You have signed out.");
   }
 
   const visibleInternships = useMemo(() => {
     const source = currentStudent ? recommendations : internships;
-    return source.filter((internship) => {
+    const filtered = source.filter((internship) => {
       const text = `${internship.title} ${internship.companyName} ${internship.location} ${(internship.requiredSkills || []).join(" ")}`.toLowerCase();
       const modeMatches = workMode === "all" || (internship.workMode || "").toLowerCase() === workMode;
-      return text.includes(search.toLowerCase()) && modeMatches
+      const stipend = Number(internship.stipendAmount || 0);
+      const stipendMatches = stipendFilter === "all"
+        || (stipendFilter === "paid" && stipend > 0)
+        || (stipendFilter === "unpaid" && stipend <= 0);
+      const weeks = Number(internship.durationWeeks || 0);
+      const durationMatches = durationFilter === "all"
+        || (durationFilter === "short" && weeks > 0 && weeks <= 8)
+        || (durationFilter === "medium" && weeks >= 9 && weeks <= 12)
+        || (durationFilter === "long" && weeks > 12);
+      return text.includes(search.toLowerCase()) && modeMatches && stipendMatches && durationMatches
         && (!currentStudent || Number(internship.matchScore || 0) >= Number(minimumMatch));
     });
-  }, [currentStudent, recommendations, internships, search, workMode, minimumMatch]);
+
+    return filtered.sort((left, right) => {
+      if (sortBy === "stipend") return Number(right.stipendAmount || 0) - Number(left.stipendAmount || 0);
+      if (sortBy === "deadline") {
+        const leftDate = left.applicationDeadline ? new Date(`${left.applicationDeadline}T00:00:00`).getTime() : Number.MAX_SAFE_INTEGER;
+        const rightDate = right.applicationDeadline ? new Date(`${right.applicationDeadline}T00:00:00`).getTime() : Number.MAX_SAFE_INTEGER;
+        return leftDate - rightDate;
+      }
+      if (sortBy === "duration") return Number(left.durationWeeks || Number.MAX_SAFE_INTEGER) - Number(right.durationWeeks || Number.MAX_SAFE_INTEGER);
+      return Number(right.matchScore || 0) - Number(left.matchScore || 0);
+    });
+  }, [currentStudent, recommendations, internships, search, workMode, minimumMatch, stipendFilter, durationFilter, sortBy]);
+
+  const savedInternships = savedInternshipIds
+    .map((id) => recommendations.find((item) => item.internshipId === id)
+      || internships.find((item) => item.internshipId === id))
+    .filter(Boolean);
+
+  const skillGapSummary = useMemo(() => {
+    const totals = new Map();
+    recommendations.forEach((internship) => {
+      (internship.missingSkills || []).forEach((skill) => {
+        const key = skill.toLowerCase();
+        const entry = totals.get(key) || { skill, count: 0, roles: [] };
+        entry.count += 1;
+        if (entry.roles.length < 3) entry.roles.push(internship.title);
+        totals.set(key, entry);
+      });
+    });
+    return [...totals.values()].sort((left, right) => right.count - left.count || left.skill.localeCompare(right.skill)).slice(0, 8);
+  }, [recommendations]);
+
+  const filteredApplications = applications.filter((application) =>
+    applicationFilter === "all" || application.status === applicationFilter
+  );
 
   async function handleApply(internship) {
     if (!apiOnline || !currentStudent) return;
@@ -466,7 +619,9 @@ export default function App() {
         <nav className="main-nav" aria-label="Main navigation">
           <button className={tab === "discover" ? "nav-link active" : "nav-link"} onClick={() => setTab("discover")}><Icon name="compass" size={16}/> Discover</button>
           <button className={tab === "profile" ? "nav-link active" : "nav-link"} onClick={() => setTab("profile")}><Icon name="user" size={16}/> My profile</button>
-          <button className={tab === "applications" ? "nav-link active" : "nav-link"} onClick={() => setTab("applications")}><Icon name="bookmark" size={16}/> Applications</button>
+          <button className={tab === "applications" ? "nav-link active" : "nav-link"} onClick={() => setTab("applications")}><Icon name="briefcase" size={16}/> Applications</button>
+          <button className={tab === "saved" ? "nav-link active" : "nav-link"} onClick={() => setTab("saved")}><Icon name="bookmark" size={16}/> Saved <span className="nav-count">{savedInternshipIds.length}</span></button>
+          <button className={tab === "insights" ? "nav-link active" : "nav-link"} onClick={() => setTab("insights")}><Icon name="spark" size={16}/> Career insights</button>
         </nav>
         <div className="header-user account-header">
           <div className="avatar">{initials(currentStudent.fullName)}</div>
@@ -500,8 +655,8 @@ export default function App() {
         <section className="welcome-row">
           <div>
             <div className="section-kicker">YOUR OPPORTUNITY SPACE</div>
-            <h2>{tab === "discover" ? `A good next step, ${currentStudent.fullName.split(" ")[0]}.` : tab === "profile" ? "Your student profile" : "Your applications"}</h2>
-            <p>{tab === "discover" ? "A shortlist shaped around the skills you already have." : tab === "profile" ? "Your academic details and skills shape your recommendations." : "Keep track of the opportunities you've applied to."}</p>
+            <h2>{tab === "discover" ? `A good next step, ${currentStudent.fullName.split(" ")[0]}.` : tab === "profile" ? "Your student profile" : tab === "applications" ? "Your applications" : tab === "saved" ? "Your saved internships" : "Your career insights"}</h2>
+            <p>{tab === "discover" ? "A shortlist shaped around the skills you already have." : tab === "profile" ? "Your academic details and skills shape your recommendations." : tab === "applications" ? "Keep track of the opportunities you've applied to." : tab === "saved" ? "Opportunities you bookmarked to revisit later." : "See which skills could unlock more internship opportunities."}</p>
           </div>
           <div className="mode-indicator"><span className="status-light live"/>Signed in · Live account</div>
         </section>
@@ -527,32 +682,73 @@ export default function App() {
               <select value={minimumMatch} onChange={(event) => setMinimumMatch(event.target.value)} aria-label="Filter by minimum match">
                 <option value="0">Any match</option><option value="50">50%+ match</option><option value="75">75%+ match</option><option value="100">100% match</option>
               </select>
+              <select value={stipendFilter} onChange={(event) => setStipendFilter(event.target.value)} aria-label="Filter by stipend">
+                <option value="all">Any stipend</option><option value="paid">Paid only</option><option value="unpaid">Unpaid / not listed</option>
+              </select>
+              <select value={durationFilter} onChange={(event) => setDurationFilter(event.target.value)} aria-label="Filter by duration">
+                <option value="all">Any duration</option><option value="short">Up to 8 weeks</option><option value="medium">9–12 weeks</option><option value="long">Over 12 weeks</option>
+              </select>
+              <select value={sortBy} onChange={(event) => setSortBy(event.target.value)} aria-label="Sort internships">
+                <option value="match">Best match first</option><option value="stipend">Highest stipend</option><option value="deadline">Closing soon</option><option value="duration">Shortest duration</option>
+              </select>
             </div>
             {visibleInternships.length ? (
               <div className="internship-grid">
                 {visibleInternships.map((internship) => (
                   <InternshipCard key={internship.internshipId} internship={internship} onApply={handleApply} onDetails={setSelectedInternship}
+                    onToggleSave={handleToggleSave} isSaved={savedInternshipIds.includes(internship.internshipId)}
                     applied={appliedIds.has(internship.internshipId)} applying={applyingId === internship.internshipId}/>
                 ))}
               </div>
-            ) : <div className="empty-state"><span className="empty-icon"><Icon name="search" size={25}/></span><h3>No opportunities found</h3><p>Try a different keyword or adjust your filters.</p><button className="text-button" onClick={() => { setSearch(""); setWorkMode("all"); setMinimumMatch("0"); }}>Clear filters</button></div>}
+            ) : <div className="empty-state"><span className="empty-icon"><Icon name="search" size={25}/></span><h3>No opportunities found</h3><p>Try a different keyword or adjust your filters.</p><button className="text-button" onClick={() => { setSearch(""); setWorkMode("all"); setMinimumMatch("0"); setStipendFilter("all"); setDurationFilter("all"); setSortBy("match"); }}>Clear filters</button></div>}
           </section>
         </>}
 
+        {tab === "saved" && <section className="opportunities-section saved-section">
+          <div className="section-heading"><div><div className="section-kicker">YOUR SHORTLIST</div><h2>Saved for later</h2></div><span className="result-count">{savedInternships.length} saved</span></div>
+          {savedInternships.length ? <div className="internship-grid">
+            {savedInternships.map((internship) => <InternshipCard key={internship.internshipId} internship={internship}
+              onApply={handleApply} onDetails={setSelectedInternship} onToggleSave={handleToggleSave} isSaved={true}
+              applied={appliedIds.has(internship.internshipId)} applying={applyingId === internship.internshipId}/>)}
+          </div> : <div className="empty-state"><span className="empty-icon"><Icon name="bookmark" size={25}/></span><h3>Your saved list is empty</h3><p>Save an internship from Discover to keep it here for later.</p><button className="button button-dark" onClick={() => setTab("discover")}>Browse internships <Icon name="arrow" size={15}/></button></div>}
+        </section>}
+
+        {tab === "insights" && <section className="insights-layout">
+          <div className="insight-summary-grid">
+            <div className="insight-summary"><span className="section-kicker">OPPORTUNITIES ANALYSED</span><strong>{recommendations.length}</strong><small>Open internships compared with your skills</small></div>
+            <div className="insight-summary"><span className="section-kicker">AVERAGE MATCH</span><strong>{averageMatch}%</strong><small>Your current skill overlap</small></div>
+            <div className="insight-summary"><span className="section-kicker">PERFECT MATCHES</span><strong>{perfectMatches}</strong><small>Roles matching all listed skills</small></div>
+          </div>
+          <div className="insights-columns">
+            <div className="side-panel">
+              <div className="section-kicker">SKILLS TO EXPLORE</div><h3>Skills appearing most in your gaps</h3>
+              <p>These skills are listed as requirements by internships that do not currently match your profile. Counts show how many open roles mention each skill.</p>
+              {skillGapSummary.length ? <div className="gap-list">{skillGapSummary.map((entry) => <div className="gap-item" key={entry.skill}><div><b>{entry.skill}</b><small>{entry.roles.join(" · ")}</small></div><span>{entry.count} {entry.count === 1 ? "role" : "roles"}</span></div>)}</div> : <div className="insight-empty">No skill gaps are visible in the current open internship list. Add more opportunities later to broaden the analysis.</div>}
+            </div>
+            <div className="side-panel">
+              <div className="section-kicker">YOUR CURRENT STRENGTHS</div><h3>Skills in your profile</h3>
+              <div className="skill-list">{(currentStudent.skills || []).length ? currentStudent.skills.map((skill) => <span className="skill-chip matched" key={skill}>{skill}</span>) : <span className="details-muted">No skills have been added yet.</span>}</div>
+              <p className="insights-tip">After learning a new skill, add it to your profile so future match scores reflect it.</p>
+              <button className="button button-dark" onClick={() => { setEditingProfile(true); setProfileError(""); setTab("profile"); }}>Update my skills <Icon name="arrow" size={15}/></button>
+            </div>
+          </div>
+        </section>}
+
         {tab === "profile" && <section className="profile-layout">
-          <div className="profile-card">
+          {editingProfile ? <ProfileEditor student={currentStudent} skills={skills} onCancel={() => { setEditingProfile(false); setProfileError(""); }} onSave={handleUpdateProfile} busy={profileBusy} error={profileError}/> : <div className="profile-card">
             <div className="profile-banner"/>
             <div className="profile-content">
               <div className="profile-avatar">{initials(currentStudent.fullName)}</div>
               <h3>{currentStudent.fullName}</h3><p>{currentStudent.department || "Department not added"} · Class of {currentStudent.graduationYear || "Not specified"}</p>
               <div className="profile-divider"/>
+              <button className="button button-outline profile-edit-trigger" onClick={() => { setEditingProfile(true); setProfileError(""); }}>Edit profile <Icon name="arrow" size={14}/></button>
               <span className="profile-label">EMAIL ADDRESS</span><div className="profile-email">{currentStudent.email}</div>
               <span className="profile-label profile-label-spaced">STUDENT ID</span><div className="profile-email">#{currentStudent.studentId}</div>
               <span className="profile-label profile-label-spaced">SKILLS ({currentStudent.skills?.length || 0})</span>
               <div className="skill-list profile-skills">{(currentStudent.skills || []).map((skill) => <span className="skill-chip matched" key={skill}>{skill}</span>)}</div>
               <p className="profile-footnote">Your account profile is stored in the application database. Keep your skills up to date to improve the relevance of your matches.</p>
             </div>
-          </div>
+          </div>}
           <div className="profile-side">
             <div className="side-panel"><div className="section-kicker">YOUR MATCH SNAPSHOT</div><h3>Where your skills can take you</h3><div className="snapshot-number">{perfectMatches}<small> perfect matches</small></div><div className="progress-track"><span style={{ width: `${Math.min(100, averageMatch)}%` }}/></div><div className="progress-foot"><span>Average skill overlap</span><b>{averageMatch}%</b></div></div>
             <div className="side-panel"><div className="section-kicker">A LITTLE TIP</div><h3>Make your profile stronger</h3><p>Your recommendations show which requirements you already meet and which skills you could develop next. Add more skills when you have learned them.</p><button className="button button-dark" onClick={() => setTab("discover")}>See recommendations <Icon name="arrow" size={15}/></button></div>
@@ -560,8 +756,14 @@ export default function App() {
         </section>}
 
         {tab === "applications" && <section className="applications-section">
-          {applications.length ? <div className="applications-list">{applications.map((application) => <div className="application-row" key={application.applicationId}><div className="company-mark">{initials(application.companyName)}</div><div className="application-info"><b>{application.internshipTitle}</b><span>{application.companyName} · {new Date(application.appliedAt).toLocaleDateString("en-IN")}</span></div><span className="application-status">{application.status.replaceAll("_", " ").toLowerCase()}</span></div>)}</div> :
-            <div className="empty-state"><span className="empty-icon"><Icon name="bookmark" size={25}/></span><h3>No applications yet</h3><p>Explore the internships that fit your skills and apply when you're ready.</p><button className="button button-dark" onClick={() => setTab("discover")}>Explore internships <Icon name="arrow" size={15}/></button></div>}
+          <div className="application-toolbar">
+            <div><span className="section-kicker">APPLICATION PIPELINE</span><p>{applications.length} total applications · Track each opportunity's current status</p></div>
+            <select value={applicationFilter} onChange={(event) => setApplicationFilter(event.target.value)} aria-label="Filter applications by status">
+              <option value="all">All statuses</option><option value="APPLIED">Applied</option><option value="UNDER_REVIEW">Under review</option><option value="SHORTLISTED">Shortlisted</option><option value="ACCEPTED">Accepted</option><option value="REJECTED">Rejected</option><option value="WITHDRAWN">Withdrawn</option>
+            </select>
+          </div>
+          {applications.length && filteredApplications.length ? <div className="applications-list">{filteredApplications.map((application) => <div className="application-row" key={application.applicationId}><div className="company-mark">{initials(application.companyName)}</div><div className="application-info"><b>{application.internshipTitle}</b><span>{application.companyName} · {new Date(application.appliedAt).toLocaleDateString("en-IN")}</span></div><span className="application-status">{application.status.replaceAll("_", " ").toLowerCase()}</span></div>)}</div> :
+            <div className="empty-state"><span className="empty-icon"><Icon name="bookmark" size={25}/></span><h3>{applications.length ? "No applications in this status" : "No applications yet"}</h3><p>{applications.length ? "Choose another status to see the rest of your applications." : "Explore the internships that fit your skills and apply when you're ready."}</p><button className="button button-dark" onClick={() => applications.length ? setApplicationFilter("all") : setTab("discover")}>{applications.length ? "Show all applications" : "Explore internships"} <Icon name="arrow" size={15}/></button></div>}
         </section>}
 
         <section className="how-section">
@@ -577,7 +779,8 @@ export default function App() {
       </main>
 
       <footer className="site-footer"><a className="brand footer-brand" href="#top"><span className="brand-symbol"><Icon name="spark" size={17}/></span><span>intern<span>match</span></span></a><span>Helping skills find the right opportunity.</span><span>Internship Matching System · Student project</span></footer>
-      <InternshipDetails internship={selectedInternship} onClose={() => setSelectedInternship(null)} onApply={handleApply}
+      <InternshipDetails internship={selectedInternship} onClose={() => setSelectedInternship(null)} onApply={handleApply} onToggleSave={handleToggleSave}
+        isSaved={selectedInternship ? savedInternshipIds.includes(selectedInternship.internshipId) : false}
         applied={selectedInternship ? appliedIds.has(selectedInternship.internshipId) : false}
         applying={selectedInternship ? applyingId === selectedInternship.internshipId : false}/>
     </div>
