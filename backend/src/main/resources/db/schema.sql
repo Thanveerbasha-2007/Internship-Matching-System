@@ -18,6 +18,19 @@ CREATE TABLE IF NOT EXISTS students (
   DEFAULT CHARSET=utf8mb4
   COLLATE=utf8mb4_unicode_ci;
 
+
+CREATE TABLE IF NOT EXISTS student_credentials (
+  student_id BIGINT UNSIGNED NOT NULL,
+  password_hash VARCHAR(100) NOT NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (student_id),
+  CONSTRAINT fk_student_credentials_student
+    FOREIGN KEY (student_id) REFERENCES students (student_id)
+    ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB
+  DEFAULT CHARSET=utf8mb4
+  COLLATE=utf8mb4_unicode_ci;
+
 CREATE TABLE IF NOT EXISTS skills (
   skill_id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
   skill_name VARCHAR(100) NOT NULL,
