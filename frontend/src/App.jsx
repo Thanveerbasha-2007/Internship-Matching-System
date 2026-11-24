@@ -626,6 +626,21 @@ function CommunityPage({ student }) {
     }
   }
 
+  async function updateProfileFollow(profile) {
+    if (!profile || connectionBusy) return;
+    const personId = profile.studentId;
+    setConnectionBusy(true);
+    try {
+      await api(`/api/network/${personId}/follow`, { method: profile.followedByMe ? "DELETE" : "POST" });
+      const refreshed = await api(`/api/community/students/${personId}`);
+      setSelectedProfile({ loading: false, data: refreshed, error: "" });
+    } catch (requestError) {
+      setSelectedProfile((current) => current ? { ...current, error: requestError.message } : current);
+    } finally {
+      setConnectionBusy(false);
+    }
+  }
+
   const totalComments = posts.reduce((sum, post) => sum + Number(post.commentCount || 0), 0);
   const myPosts = posts.filter((post) => post.authorStudentId === student.studentId);
   const postCountByCategory = posts.reduce((counts, post) => {
@@ -828,10 +843,12 @@ function CommunityPage({ student }) {
                               : selectedProfile.data.connectionStatus === "INCOMING_PENDING"
                                 ? <><button className="button button-dark" type="button" disabled={connectionBusy} onClick={() => updateProfileConnection(selectedProfile.data)}>{connectionBusy ? "Updating…" : "Accept request"}</button><button className="button button-outline" type="button" disabled={connectionBusy} onClick={() => updateProfileConnection(selectedProfile.data, "secondary")}>Ignore</button></>
                                 : <button className="button button-dark" type="button" disabled={connectionBusy} onClick={() => updateProfileConnection(selectedProfile.data)}>{connectionBusy ? "Sending…" : "＋ Connect"}</button>}
+                          <button className={selectedProfile.data.followedByMe ? "button button-outline" : "button button-outline network-follow-button"} type="button" disabled={connectionBusy} onClick={() => updateProfileFollow(selectedProfile.data)}>{connectionBusy ? "Updating…" : selectedProfile.data.followedByMe ? "Following" : "Follow"}</button>
                         </div>}
                   </div>
                   <div className="community-profile-stats">
                     <div><strong>{selectedProfile.data.connectionCount ?? 0}</strong><span>Connections</span></div>
+                    <div><strong>{selectedProfile.data.followerCount ?? 0}</strong><span>Followers</span></div>
                     <div><strong>{selectedProfile.data.discussionCount}</strong><span>Discussions</span></div>
                     <div><strong>{selectedProfile.data.commentCount}</strong><span>Replies</span></div>
                     <div><strong>{selectedProfile.data.skills.length}</strong><span>Skills</span></div>
