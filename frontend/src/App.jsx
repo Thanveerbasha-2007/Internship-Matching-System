@@ -55,6 +55,14 @@ function Icon({ name, size = 18 }) {
     logOut: <><path d="M10 17l5-5-5-5M15 12H3"/><path d="M12 3h6a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-6"/></>,
     close: <path d="m6 6 12 12M18 6 6 18"/>,
     eye: <><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></>,
+    message: <><path d="M21 11.5a8.4 8.4 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.4 8.4 0 0 1-3.8-.9L3 21l1.9-5.7a8.4 8.4 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.4 8.4 0 0 1 3.8-.9h.5a8.5 8.5 0 0 1 8 8v.5Z"/></>,
+    thumbs: <><path d="M7 10v12H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h3ZM7 10l5-8c2.5 0 3 2 2 5l-1 3h6a2 2 0 0 1 2 2l-2 8a2 2 0 0 1-2 2H7"/></>,
+    flag: <><path d="M4 22V4"/><path d="M4 4c7-5 9 5 16 0v12c-7 5-9-5-16 0"/></>,
+    plus: <><path d="M12 5v14M5 12h14"/></>,
+    send: <><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></>,
+    trash: <><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6M10 11v5M14 11v5"/></>,
+    edit: <><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L8 18l-4 1 1-4Z"/></>,
+    flag: <><path d="M4 22V4"/><path d="M4 4c7-5 9 5 16 0v12c-7 5-9-5-16 0"/></>,
   };
   return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{paths[name] || paths.spark}</svg>;
 }
@@ -311,6 +319,369 @@ function InternshipDetails({ internship, onClose, onApply, onToggleSave, isSaved
         <div className="details-footer"><span>Match score is calculated from required skill overlap.</span><div className="details-footer-actions"><button className={isSaved ? "button button-saved" : "button button-outline"} onClick={() => onToggleSave(internship)}>{isSaved ? "Saved" : "Save for later"}</button><button className="button button-dark" disabled={applied || applying} onClick={() => onApply(internship)}>{applied ? "Already applied" : applying ? "Applying…" : "Apply for this internship"} <Icon name="arrow" size={15}/></button></div></div>
       </section>
     </div>
+  );
+}
+
+
+const COMMUNITY_CATEGORIES = [
+  { value: "ALL", label: "All discussions" },
+  { value: "INTERNSHIP_QUESTIONS", label: "Internship Q&A" },
+  { value: "EXPERIENCES", label: "Experiences" },
+  { value: "INTERVIEW_PREP", label: "Interview prep" },
+  { value: "CAREER_ADVICE", label: "Career advice" },
+  { value: "STUDENT_LIFE", label: "Student life" },
+  { value: "GENERAL", label: "General" },
+];
+
+function communityCategoryLabel(value) {
+  return COMMUNITY_CATEGORIES.find((item) => item.value === value)?.label || "Discussion";
+}
+
+function communityTimeAgo(value) {
+  if (!value) return "Recently";
+  const time = new Date(value).getTime();
+  if (Number.isNaN(time)) return "Recently";
+  const minutes = Math.max(0, Math.floor((Date.now() - time) / 60000));
+  if (minutes < 1) return "just now";
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  if (days < 7) return `${days}d ago`;
+  return new Date(value).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
+}
+
+function CommunityPage({ student }) {
+  const [posts, setPosts] = useState([]);
+  const [category, setCategory] = useState("ALL");
+  const [sort, setSort] = useState("NEWEST");
+  const [search, setSearch] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
+  const [showComposer, setShowComposer] = useState(false);
+  const [editingPostId, setEditingPostId] = useState(null);
+  const [postCategory, setPostCategory] = useState("INTERNSHIP_QUESTIONS");
+  const [postTitle, setPostTitle] = useState("");
+  const [postBody, setPostBody] = useState("");
+  const [expandedPosts, setExpandedPosts] = useState({});
+  const [commentsByPost, setCommentsByPost] = useState({});
+  const [commentDrafts, setCommentDrafts] = useState({});
+  const [commentBusy, setCommentBusy] = useState(null);
+  const [reportingPostId, setReportingPostId] = useState(null);
+  const [reportReason, setReportReason] = useState("SPAM");
+  const [reportDetails, setReportDetails] = useState("");
+  const [reportBusy, setReportBusy] = useState(false);
+
+  async function loadPosts() {
+    setLoading(true);
+    setError("");
+    try {
+      const params = new URLSearchParams({ sort, category });
+      if (search.trim()) params.set("q", search.trim());
+      const data = await api(`/api/community/posts?${params.toString()}`);
+      setPosts(data);
+    } catch (requestError) {
+      setError(requestError.message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    loadPosts();
+  }, [sort, category, search]);
+
+  function openComposer() {
+    setEditingPostId(null);
+    setPostCategory("INTERNSHIP_QUESTIONS");
+    setPostTitle("");
+    setPostBody("");
+    setError("");
+    setShowComposer(true);
+  }
+
+  function startEditing(post) {
+    setEditingPostId(post.postId);
+    setPostCategory(post.category);
+    setPostTitle(post.title);
+    setPostBody(post.body);
+    setError("");
+    setShowComposer(true);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  async function submitPost(event) {
+    event.preventDefault();
+    setBusy(true);
+    setError("");
+    try {
+      const endpoint = editingPostId
+        ? `/api/community/posts/${editingPostId}`
+        : "/api/community/posts";
+      const saved = await api(endpoint, {
+        method: editingPostId ? "PUT" : "POST",
+        body: JSON.stringify({ category: postCategory, title: postTitle.trim(), body: postBody.trim() }),
+      });
+      setShowComposer(false);
+      setEditingPostId(null);
+      setPostTitle("");
+      setPostBody("");
+      setNotice(editingPostId ? "Your discussion has been updated." : "Your discussion has been posted.");
+      if (sort === "NEWEST") {
+        setPosts((current) => [saved, ...current.filter((item) => item.postId !== saved.postId)]);
+      } else {
+        await loadPosts();
+      }
+    } catch (requestError) {
+      setError(requestError.message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function deletePost(post) {
+    if (!window.confirm("Delete this discussion? Its comments and votes will also be removed.")) return;
+    try {
+      await api(`/api/community/posts/${post.postId}`, { method: "DELETE" });
+      setPosts((current) => current.filter((item) => item.postId !== post.postId));
+      setNotice("Your discussion has been deleted.");
+    } catch (requestError) {
+      setError(requestError.message);
+    }
+  }
+
+  async function toggleUpvote(post) {
+    try {
+      const updated = await api(`/api/community/posts/${post.postId}/upvote`, {
+        method: post.upvotedByMe ? "DELETE" : "POST",
+      });
+      setPosts((current) => current.map((item) => item.postId === updated.postId ? updated : item));
+    } catch (requestError) {
+      setError(requestError.message);
+    }
+  }
+
+  async function toggleComments(post) {
+    const opening = !expandedPosts[post.postId];
+    setExpandedPosts((current) => ({ ...current, [post.postId]: opening }));
+    if (opening && !commentsByPost[post.postId]) {
+      try {
+        const data = await api(`/api/community/posts/${post.postId}/comments`);
+        setCommentsByPost((current) => ({ ...current, [post.postId]: data }));
+      } catch (requestError) {
+        setError(requestError.message);
+      }
+    }
+  }
+
+  async function submitComment(post, event) {
+    event.preventDefault();
+    const body = (commentDrafts[post.postId] || "").trim();
+    if (!body) return;
+    setCommentBusy(post.postId);
+    try {
+      const comment = await api(`/api/community/posts/${post.postId}/comments`, {
+        method: "POST",
+        body: JSON.stringify({ body }),
+      });
+      setCommentsByPost((current) => ({
+        ...current,
+        [post.postId]: [...(current[post.postId] || []), comment],
+      }));
+      setCommentDrafts((current) => ({ ...current, [post.postId]: "" }));
+      setPosts((current) => current.map((item) => item.postId === post.postId
+        ? { ...item, commentCount: item.commentCount + 1 }
+        : item));
+    } catch (requestError) {
+      setError(requestError.message);
+    } finally {
+      setCommentBusy(null);
+    }
+  }
+
+  async function deleteComment(postId, commentId) {
+    try {
+      await api(`/api/community/comments/${commentId}`, { method: "DELETE" });
+      setCommentsByPost((current) => ({
+        ...current,
+        [postId]: (current[postId] || []).filter((item) => item.commentId !== commentId),
+      }));
+      setPosts((current) => current.map((item) => item.postId === postId
+        ? { ...item, commentCount: Math.max(0, item.commentCount - 1) }
+        : item));
+    } catch (requestError) {
+      setError(requestError.message);
+    }
+  }
+
+  async function submitReport(post, event) {
+    event.preventDefault();
+    setReportBusy(true);
+    try {
+      await api(`/api/community/posts/${post.postId}/report`, {
+        method: "POST",
+        body: JSON.stringify({ reason: reportReason, details: reportDetails.trim() }),
+      });
+      setReportingPostId(null);
+      setReportDetails("");
+      setNotice("Thanks. Your report has been recorded for review.");
+    } catch (requestError) {
+      setError(requestError.message);
+    } finally {
+      setReportBusy(false);
+    }
+  }
+
+  const totalComments = posts.reduce((sum, post) => sum + Number(post.commentCount || 0), 0);
+  const postCountByCategory = posts.reduce((counts, post) => {
+    counts[post.category] = (counts[post.category] || 0) + 1;
+    return counts;
+  }, {});
+
+  return (
+    <section className="community-page">
+      <div className="community-banner">
+        <div>
+          <div className="section-kicker">STUDENTS HELPING STUDENTS</div>
+          <h2>Share what you know.<br/><em>Ask what you don’t.</em></h2>
+          <p>Ask internship questions, share interview experiences, celebrate small wins, and get advice from people on the same journey.</p>
+        </div>
+        <div className="community-banner-stats">
+          <div><strong>{posts.length}</strong><span>discussions here</span></div>
+          <div><strong>{totalComments}</strong><span>replies in this view</span></div>
+        </div>
+      </div>
+
+      {notice && <div className="community-feedback">{notice}<button type="button" onClick={() => setNotice("")}>Dismiss</button></div>}
+      {error && <div className="community-error" role="alert">{error}<button type="button" onClick={() => setError("")}>Dismiss</button></div>}
+
+      <div className="community-layout">
+        <main className="community-main">
+          <button className="community-composer-trigger" type="button" onClick={openComposer}>
+            <span className="community-trigger-avatar">{initials(student.fullName)}</span>
+            <span>Have a question or experience to share? Start a discussion…</span>
+            <span className="community-trigger-plus"><Icon name="plus" size={17}/> Post</span>
+          </button>
+
+          {showComposer && (
+            <form className="community-composer" onSubmit={submitPost}>
+              <div className="community-composer-heading">
+                <div><span className="section-kicker">{editingPostId ? "EDIT DISCUSSION" : "NEW DISCUSSION"}</span><h3>{editingPostId ? "Update your post" : "Start a conversation"}</h3></div>
+                <button className="community-icon-button" type="button" onClick={() => setShowComposer(false)} aria-label="Close composer"><Icon name="close" size={18}/></button>
+              </div>
+              <label>Choose a topic
+                <select value={postCategory} onChange={(event) => setPostCategory(event.target.value)}>
+                  {COMMUNITY_CATEGORIES.filter((item) => item.value !== "ALL").map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
+                </select>
+              </label>
+              <label>Discussion title
+                <input required maxLength="180" value={postTitle} onChange={(event) => setPostTitle(event.target.value)} placeholder="What would you like to talk about?"/>
+              </label>
+              <label>Your thoughts
+                <textarea required maxLength="10000" rows="5" value={postBody} onChange={(event) => setPostBody(event.target.value)} placeholder="Share the context, ask your question, or tell the community what you learned…"/>
+              </label>
+              <div className="community-composer-bottom"><span>{postBody.length}/10,000 characters · Be kind and constructive.</span><button className="button button-dark" disabled={busy}>{busy ? "Posting…" : editingPostId ? "Save changes" : "Publish discussion"} <Icon name="send" size={15}/></button></div>
+            </form>
+          )}
+
+          <div className="community-feed-toolbar">
+            <div><span className="section-kicker">COMMUNITY FEED</span><h3>Conversations from students</h3></div>
+            <div className="community-sort">
+              <button className={sort === "NEWEST" ? "selected" : ""} onClick={() => setSort("NEWEST")}>Newest</button>
+              <button className={sort === "TOP" ? "selected" : ""} onClick={() => setSort("TOP")}>Top</button>
+            </div>
+          </div>
+
+          <label className="community-search"><Icon name="search" size={17}/><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search discussions, questions or advice…"/></label>
+          <div className="community-category-list">
+            {COMMUNITY_CATEGORIES.map((item) => <button type="button" key={item.value} className={category === item.value ? "community-category active" : "community-category"} onClick={() => setCategory(item.value)}>{item.label}</button>)}
+          </div>
+
+          {loading ? <div className="community-empty"><div className="loader"/><p>Loading conversations…</p></div> : posts.length ? (
+            <div className="community-post-list">
+              {posts.map((post) => (
+                <article className="community-post" key={post.postId}>
+                  <div className="community-post-top">
+                    <div className="community-author-avatar">{initials(post.authorName)}</div>
+                    <div className="community-author-meta"><strong>{post.authorName}</strong><span>{post.authorDepartment || "Student"} · {communityTimeAgo(post.createdAt)}</span></div>
+                    <span className="community-post-category">{communityCategoryLabel(post.category)}</span>
+                  </div>
+                  <h3 className="community-post-title">{post.title}</h3>
+                  <p className="community-post-body">{post.body}</p>
+                  <div className="community-post-actions">
+                    <button type="button" className={post.upvotedByMe ? "community-action upvoted" : "community-action"} onClick={() => toggleUpvote(post)}><Icon name="thumbs" size={16}/>{post.upvotedByMe ? "Upvoted" : "Upvote"} <span>{post.upvoteCount}</span></button>
+                    <button type="button" className="community-action" onClick={() => toggleComments(post)}><Icon name="message" size={16}/>{expandedPosts[post.postId] ? "Hide comments" : "Comments"} <span>{post.commentCount}</span></button>
+                    {post.authorStudentId === student.studentId ? <>
+                      <button type="button" className="community-action" onClick={() => startEditing(post)}><Icon name="edit" size={15}/> Edit</button>
+                      <button type="button" className="community-action subtle-danger" onClick={() => deletePost(post)}><Icon name="trash" size={15}/> Delete</button>
+                    </> : <button type="button" className="community-action report-action" onClick={() => { setReportingPostId(reportingPostId === post.postId ? null : post.postId); setReportReason("SPAM"); setReportDetails(""); }}><Icon name="flag" size={15}/> Report</button>}
+                  </div>
+
+                  {reportingPostId === post.postId && (
+                    <form className="community-report-form" onSubmit={(event) => submitReport(post, event)}>
+                      <div className="community-report-heading">Report this discussion</div>
+                      <div className="community-report-fields">
+                        <select value={reportReason} onChange={(event) => setReportReason(event.target.value)}>
+                          <option value="SPAM">Spam or promotion</option><option value="HARASSMENT">Harassment</option><option value="MISINFORMATION">Misleading information</option><option value="INAPPROPRIATE">Inappropriate content</option><option value="OTHER">Other</option>
+                        </select>
+                        <input maxLength="500" value={reportDetails} onChange={(event) => setReportDetails(event.target.value)} placeholder="Optional details"/>
+                        <button className="button button-outline" disabled={reportBusy}>{reportBusy ? "Sending…" : "Submit report"}</button>
+                      </div>
+                    </form>
+                  )}
+
+                  {expandedPosts[post.postId] && (
+                    <div className="community-comments">
+                      <div className="community-comments-heading">{post.commentCount} {post.commentCount === 1 ? "reply" : "replies"}</div>
+                      {(commentsByPost[post.postId] || []).map((comment) => (
+                        <div className="community-comment" key={comment.commentId}>
+                          <div className="community-comment-avatar">{initials(comment.authorName)}</div>
+                          <div className="community-comment-content"><div><strong>{comment.authorName}</strong><span>{communityTimeAgo(comment.createdAt)}</span></div><p>{comment.body}</p></div>
+                          {comment.authorStudentId === student.studentId && <button className="community-icon-button" type="button" title="Delete comment" onClick={() => deleteComment(post.postId, comment.commentId)}><Icon name="trash" size={14}/></button>}
+                        </div>
+                      ))}
+                      {!(commentsByPost[post.postId] || []).length && <p className="community-no-comments">No replies yet. Be the first to help.</p>}
+                      <form className="community-reply-form" onSubmit={(event) => submitComment(post, event)}>
+                        <span className="community-comment-avatar">{initials(student.fullName)}</span>
+                        <input value={commentDrafts[post.postId] || ""} onChange={(event) => setCommentDrafts((current) => ({ ...current, [post.postId]: event.target.value }))} maxLength="4000" placeholder="Write a thoughtful reply…" aria-label="Write a comment"/>
+                        <button type="submit" className="community-reply-send" disabled={commentBusy === post.postId || !(commentDrafts[post.postId] || "").trim()} aria-label="Send reply"><Icon name="send" size={16}/></button>
+                      </form>
+                    </div>
+                  )}
+                </article>
+              ))}
+            </div>
+          ) : (
+            <div className="community-empty"><span className="empty-icon"><Icon name="message" size={25}/></span><h3>No discussions yet</h3><p>Be the first student to start a conversation in this category.</p><button className="button button-dark" onClick={openComposer}>Start the first discussion <Icon name="plus" size={15}/></button></div>
+          )}
+        </main>
+
+        <aside className="community-sidebar">
+          <div className="community-side-card community-welcome-card">
+            <div className="section-kicker">A SPACE FOR STUDENTS</div><h3>Everyone starts somewhere.</h3>
+            <p>Share honest experiences, ask questions without worrying about having all the answers, and help the next student learn from your journey.</p>
+            <button className="button button-dark" onClick={openComposer}><Icon name="plus" size={15}/> Start a discussion</button>
+          </div>
+          <div className="community-side-card">
+            <div className="section-kicker">COMMUNITY GUIDELINES</div><h3>Keep this space useful</h3>
+            <ul>
+              <li>Be respectful. Students have different backgrounds and experience levels.</li>
+              <li>Share genuine experiences; make it clear when something is only your opinion.</li>
+              <li>Never post passwords, phone numbers, private documents or confidential interview material.</li>
+              <li>Do not pay anyone for referrals or share suspicious internship links.</li>
+            </ul>
+          </div>
+          <div className="community-side-card">
+            <div className="section-kicker">EXPLORE TOPICS</div><h3>Find your conversation</h3>
+            <div className="community-topic-links">
+              {COMMUNITY_CATEGORIES.filter((item) => item.value !== "ALL").map((item) => <button key={item.value} onClick={() => { setCategory(item.value); window.scrollTo({ top: 0, behavior: "smooth" }); }}><span>{item.label}</span><Icon name="arrow" size={14}/></button>)}
+            </div>
+          </div>
+        </aside>
+      </div>
+    </section>
   );
 }
 
@@ -622,6 +993,7 @@ export default function App() {
           <button className={tab === "applications" ? "nav-link active" : "nav-link"} onClick={() => setTab("applications")}><Icon name="briefcase" size={16}/> Applications</button>
           <button className={tab === "saved" ? "nav-link active" : "nav-link"} onClick={() => setTab("saved")}><Icon name="bookmark" size={16}/> Saved <span className="nav-count">{savedInternshipIds.length}</span></button>
           <button className={tab === "insights" ? "nav-link active" : "nav-link"} onClick={() => setTab("insights")}><Icon name="spark" size={16}/> Career insights</button>
+          <button className={tab === "community" ? "nav-link active" : "nav-link"} onClick={() => setTab("community")}><Icon name="message" size={16}/> Community</button>
         </nav>
         <div className="header-user account-header">
           <div className="avatar">{initials(currentStudent.fullName)}</div>
@@ -655,11 +1027,13 @@ export default function App() {
         <section className="welcome-row">
           <div>
             <div className="section-kicker">YOUR OPPORTUNITY SPACE</div>
-            <h2>{tab === "discover" ? `A good next step, ${currentStudent.fullName.split(" ")[0]}.` : tab === "profile" ? "Your student profile" : tab === "applications" ? "Your applications" : tab === "saved" ? "Your saved internships" : "Your career insights"}</h2>
-            <p>{tab === "discover" ? "A shortlist shaped around the skills you already have." : tab === "profile" ? "Your academic details and skills shape your recommendations." : tab === "applications" ? "Keep track of the opportunities you've applied to." : tab === "saved" ? "Opportunities you bookmarked to revisit later." : "See which skills could unlock more internship opportunities."}</p>
+            <h2>{tab === "discover" ? `A good next step, ${currentStudent.fullName.split(" ")[0]}.` : tab === "profile" ? "Your student profile" : tab === "applications" ? "Your applications" : tab === "saved" ? "Your saved internships" : tab === "community" ? "Student community" : "Your career insights"}</h2>
+            <p>{tab === "discover" ? "A shortlist shaped around the skills you already have." : tab === "profile" ? "Your academic details and skills shape your recommendations." : tab === "applications" ? "Keep track of the opportunities you've applied to." : tab === "saved" ? "Opportunities you bookmarked to revisit later." : tab === "community" ? "Ask questions, share experiences and help other students navigate internships." : "See which skills could unlock more internship opportunities."}</p>
           </div>
           <div className="mode-indicator"><span className="status-light live"/>Signed in · Live account</div>
         </section>
+
+        {tab === "community" && <CommunityPage student={currentStudent}/>}
 
         {tab === "discover" && <>
           <section className="stats-grid">
