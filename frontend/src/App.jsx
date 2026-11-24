@@ -208,6 +208,16 @@ function ProfileEditor({ student, skills, onCancel, onSave, busy, error }) {
   const [fullName, setFullName] = useState(student.fullName || "");
   const [department, setDepartment] = useState(student.department || "");
   const [graduationYear, setGraduationYear] = useState(student.graduationYear || "");
+  const [headline, setHeadline] = useState(student.headline || "");
+  const [about, setAbout] = useState(student.about || "");
+  const [location, setLocation] = useState(student.location || "");
+  const [avatarUrl, setAvatarUrl] = useState(student.avatarUrl || "");
+  const [coverImageUrl, setCoverImageUrl] = useState(student.coverImageUrl || "");
+  const [linkedinUrl, setLinkedinUrl] = useState(student.linkedinUrl || "");
+  const [githubUrl, setGithubUrl] = useState(student.githubUrl || "");
+  const [portfolioUrl, setPortfolioUrl] = useState(student.portfolioUrl || "");
+  const [projects, setProjects] = useState(student.projects || "");
+  const [achievements, setAchievements] = useState(student.achievements || "");
   const [selectedSkills, setSelectedSkills] = useState(
     skills.filter((skill) => (student.skills || []).includes(skill.skillName)).map((skill) => skill.skillId)
   );
@@ -225,22 +235,63 @@ function ProfileEditor({ student, skills, onCancel, onSave, busy, error }) {
       department: department.trim(),
       graduationYear: graduationYear ? Number(graduationYear) : null,
       skillIds: selectedSkills,
+      headline: headline.trim(),
+      about: about.trim(),
+      location: location.trim(),
+      avatarUrl: avatarUrl.trim(),
+      coverImageUrl: coverImageUrl.trim(),
+      linkedinUrl: linkedinUrl.trim(),
+      githubUrl: githubUrl.trim(),
+      portfolioUrl: portfolioUrl.trim(),
+      projects: projects.trim(),
+      achievements: achievements.trim(),
     });
   }
 
   return (
-    <form className="profile-card profile-edit-card" onSubmit={submit}>
+    <form className="profile-card profile-edit-card rich-profile-editor" onSubmit={submit}>
       <div className="profile-banner"/>
       <div className="profile-content">
         <span className="profile-label">EDIT YOUR STUDENT PROFILE</span>
-        <h3>Keep your details current</h3>
-        <p>Your selected skills are used to calculate internship matches.</p>
-        <label className="profile-edit-field">Full name<input required maxLength="120" value={fullName} onChange={(event) => setFullName(event.target.value)}/></label>
-        <label className="profile-edit-field">Department<input maxLength="120" value={department} onChange={(event) => setDepartment(event.target.value)} placeholder="e.g. Computer Science"/></label>
-        <label className="profile-edit-field">Graduation year<input type="number" min="2020" max="2100" value={graduationYear} onChange={(event) => setGraduationYear(event.target.value)} placeholder="2027"/></label>
-        <span className="profile-label profile-label-spaced">YOUR SKILLS</span>
-        <div className="profile-edit-skills">
-          {skills.map((skill) => <label key={skill.skillId} className="profile-edit-skill"><input type="checkbox" checked={selectedSkills.includes(skill.skillId)} onChange={() => toggleSkill(skill.skillId)}/>{skill.skillName}</label>)}
+        <h3>Build your student portfolio</h3>
+        <p>Show your interests, projects and achievements so other students can discover what you are working on.</p>
+        <div className="profile-form-section">
+          <div className="section-kicker">BASIC DETAILS</div>
+          <div className="profile-form-grid">
+            <label className="profile-edit-field">Full name<input required maxLength="120" value={fullName} onChange={(event) => setFullName(event.target.value)}/></label>
+            <label className="profile-edit-field">Department<input maxLength="120" value={department} onChange={(event) => setDepartment(event.target.value)} placeholder="e.g. Computer Science"/></label>
+            <label className="profile-edit-field">Graduation year<input type="number" min="2020" max="2100" value={graduationYear} onChange={(event) => setGraduationYear(event.target.value)} placeholder="2027"/></label>
+            <label className="profile-edit-field">Location<input maxLength="160" value={location} onChange={(event) => setLocation(event.target.value)} placeholder="e.g. Lucknow, India"/></label>
+          </div>
+          <label className="profile-edit-field">Professional headline<input maxLength="180" value={headline} onChange={(event) => setHeadline(event.target.value)} placeholder="e.g. CSAI student | C++ | Full-stack development"/></label>
+          <label className="profile-edit-field">About<textarea rows="4" maxLength="5000" value={about} onChange={(event) => setAbout(event.target.value)} placeholder="Introduce yourself, your interests and the kind of opportunities you are looking for."/></label>
+        </div>
+        <div className="profile-form-section">
+          <div className="section-kicker">PROFILE IMAGES</div>
+          <div className="profile-form-grid">
+            <label className="profile-edit-field">Profile photo URL<input type="url" maxLength="500" value={avatarUrl} onChange={(event) => setAvatarUrl(event.target.value)} placeholder="https://…"/></label>
+            <label className="profile-edit-field">Cover image URL<input type="url" maxLength="500" value={coverImageUrl} onChange={(event) => setCoverImageUrl(event.target.value)} placeholder="https://…"/></label>
+          </div>
+          <small className="profile-form-hint">Use a publicly accessible HTTPS image URL. You can leave these blank and keep the initials-based profile image.</small>
+        </div>
+        <div className="profile-form-section">
+          <div className="section-kicker">LINKS</div>
+          <div className="profile-form-grid">
+            <label className="profile-edit-field">LinkedIn URL<input type="url" maxLength="500" value={linkedinUrl} onChange={(event) => setLinkedinUrl(event.target.value)} placeholder="https://linkedin.com/in/…"/></label>
+            <label className="profile-edit-field">GitHub URL<input type="url" maxLength="500" value={githubUrl} onChange={(event) => setGithubUrl(event.target.value)} placeholder="https://github.com/…"/></label>
+            <label className="profile-edit-field">Portfolio URL<input type="url" maxLength="500" value={portfolioUrl} onChange={(event) => setPortfolioUrl(event.target.value)} placeholder="https://…"/></label>
+          </div>
+        </div>
+        <div className="profile-form-section">
+          <div className="section-kicker">PROJECTS & ACHIEVEMENTS</div>
+          <label className="profile-edit-field">Projects<textarea rows="4" maxLength="5000" value={projects} onChange={(event) => setProjects(event.target.value)} placeholder={"One project per line\nInternMatch — student internship platform\nNetwork monitoring dashboard"}/></label>
+          <label className="profile-edit-field">Achievements<textarea rows="3" maxLength="5000" value={achievements} onChange={(event) => setAchievements(event.target.value)} placeholder={"One achievement per line\nHackathon finalist\nCompleted a certification"}/></label>
+        </div>
+        <div className="profile-form-section">
+          <span className="profile-label">YOUR SKILLS</span>
+          <div className="profile-edit-skills">
+            {skills.map((skill) => <label key={skill.skillId} className="profile-edit-skill"><input type="checkbox" checked={selectedSkills.includes(skill.skillId)} onChange={() => toggleSkill(skill.skillId)}/>{skill.skillName}</label>)}
+          </div>
         </div>
         {error && <div className="auth-error" role="alert">{error}</div>}
         <div className="profile-edit-actions"><button type="button" className="button button-outline" onClick={onCancel}>Cancel</button><button type="submit" className="button button-dark" disabled={busy}>{busy ? "Saving…" : "Save profile"}</button></div>
@@ -375,6 +426,7 @@ function CommunityPage({ student }) {
   const [reportDetails, setReportDetails] = useState("");
   const [reportBusy, setReportBusy] = useState(false);
   const [selectedProfile, setSelectedProfile] = useState(null);
+  const [connectionBusy, setConnectionBusy] = useState(false);
 
   async function loadPosts() {
     setLoading(true);
@@ -543,6 +595,34 @@ function CommunityPage({ student }) {
       setSelectedProfile({ loading: false, data, error: "" });
     } catch (requestError) {
       setSelectedProfile({ loading: false, data: null, error: requestError.message });
+    }
+  }
+
+  async function updateProfileConnection(profile, action = "primary") {
+    if (!profile || connectionBusy) return;
+    const personId = profile.studentId;
+    const status = profile.connectionStatus;
+    let path = `/api/network/${personId}/request`;
+    let method = "POST";
+    if (status === "INCOMING_PENDING" && action === "primary") {
+      path = `/api/network/requests/${personId}/accept`;
+      method = "PATCH";
+    } else if (status === "CONNECTED") {
+      path = `/api/network/connections/${personId}`;
+      method = "DELETE";
+    } else if (status === "OUTGOING_PENDING" || (status === "INCOMING_PENDING" && action === "secondary")) {
+      path = `/api/network/requests/${personId}`;
+      method = "DELETE";
+    }
+    setConnectionBusy(true);
+    try {
+      await api(path, { method });
+      const refreshed = await api(`/api/community/students/${personId}`);
+      setSelectedProfile({ loading: false, data: refreshed, error: "" });
+    } catch (requestError) {
+      setSelectedProfile((current) => current ? { ...current, error: requestError.message } : current);
+    } finally {
+      setConnectionBusy(false);
     }
   }
 
@@ -729,18 +809,41 @@ function CommunityPage({ student }) {
               <div className="community-profile-loading"><p>{selectedProfile.error}</p><button className="button button-outline" onClick={() => setSelectedProfile(null)}>Close</button></div>
             ) : selectedProfile.data && (
               <>
-                <div className="community-profile-cover"/>
+                <div className="community-profile-cover" style={selectedProfile.data.coverImageUrl ? { backgroundImage: `linear-gradient(110deg, rgba(18,31,50,.22), rgba(18,31,50,.05)), url("${selectedProfile.data.coverImageUrl}")` } : undefined}/>
                 <div className="community-profile-content">
-                  <div className="community-profile-avatar">{initials(selectedProfile.data.fullName)}</div>
+                  <div className="community-profile-avatar">
+                    {selectedProfile.data.avatarUrl
+                      ? <img src={selectedProfile.data.avatarUrl} alt="" onError={(event) => { event.currentTarget.style.display = "none"; }}/>
+                      : initials(selectedProfile.data.fullName)}
+                  </div>
                   <div className="community-profile-heading">
-                    <div><h2>{selectedProfile.data.fullName}</h2><p>{selectedProfile.data.department || "Student"}{selectedProfile.data.graduationYear ? ` · Class of ${selectedProfile.data.graduationYear}` : ""}</p></div>
-                    {selectedProfile.data.studentId === student.studentId && <span className="community-profile-you">Your profile</span>}
+                    <div><h2>{selectedProfile.data.fullName}</h2><p>{selectedProfile.data.headline || selectedProfile.data.department || "Student"}{selectedProfile.data.graduationYear ? ` · Class of ${selectedProfile.data.graduationYear}` : ""}</p>{selectedProfile.data.location && <span className="profile-location-line"><Icon name="pin" size={13}/>{selectedProfile.data.location}</span>}</div>
+                    {selectedProfile.data.studentId === student.studentId
+                      ? <span className="community-profile-you">Your profile</span>
+                      : <div className="community-profile-connect">
+                          {selectedProfile.data.connectionStatus === "CONNECTED"
+                            ? <button className="button button-outline" type="button" disabled={connectionBusy} onClick={() => updateProfileConnection(selectedProfile.data)}>{connectionBusy ? "Updating…" : "Connected · Remove"}</button>
+                            : selectedProfile.data.connectionStatus === "OUTGOING_PENDING"
+                              ? <button className="button button-outline" type="button" disabled={connectionBusy} onClick={() => updateProfileConnection(selectedProfile.data)}>{connectionBusy ? "Updating…" : "Request sent · Withdraw"}</button>
+                              : selectedProfile.data.connectionStatus === "INCOMING_PENDING"
+                                ? <><button className="button button-dark" type="button" disabled={connectionBusy} onClick={() => updateProfileConnection(selectedProfile.data)}>{connectionBusy ? "Updating…" : "Accept request"}</button><button className="button button-outline" type="button" disabled={connectionBusy} onClick={() => updateProfileConnection(selectedProfile.data, "secondary")}>Ignore</button></>
+                                : <button className="button button-dark" type="button" disabled={connectionBusy} onClick={() => updateProfileConnection(selectedProfile.data)}>{connectionBusy ? "Sending…" : "＋ Connect"}</button>}
+                        </div>}
                   </div>
                   <div className="community-profile-stats">
+                    <div><strong>{selectedProfile.data.connectionCount ?? 0}</strong><span>Connections</span></div>
                     <div><strong>{selectedProfile.data.discussionCount}</strong><span>Discussions</span></div>
                     <div><strong>{selectedProfile.data.commentCount}</strong><span>Replies</span></div>
                     <div><strong>{selectedProfile.data.skills.length}</strong><span>Skills</span></div>
                   </div>
+                  {selectedProfile.data.about && <div className="community-profile-section"><div className="section-kicker">ABOUT</div><p className="community-profile-about">{selectedProfile.data.about}</p></div>}
+                  {(selectedProfile.data.linkedinUrl || selectedProfile.data.githubUrl || selectedProfile.data.portfolioUrl) && <div className="community-profile-section"><div className="section-kicker">LINKS</div><div className="profile-social-links">
+                    {selectedProfile.data.linkedinUrl && <a href={selectedProfile.data.linkedinUrl} target="_blank" rel="noreferrer">LinkedIn ↗</a>}
+                    {selectedProfile.data.githubUrl && <a href={selectedProfile.data.githubUrl} target="_blank" rel="noreferrer">GitHub ↗</a>}
+                    {selectedProfile.data.portfolioUrl && <a href={selectedProfile.data.portfolioUrl} target="_blank" rel="noreferrer">Portfolio ↗</a>}
+                  </div></div>}
+                  {selectedProfile.data.projects && <div className="community-profile-section"><div className="section-kicker">PROJECTS</div><div className="profile-lines">{selectedProfile.data.projects.split("\\n").filter(Boolean).map((line, index) => <div key={index}>{line}</div>)}</div></div>}
+                  {selectedProfile.data.achievements && <div className="community-profile-section"><div className="section-kicker">ACHIEVEMENTS</div><div className="profile-lines">{selectedProfile.data.achievements.split("\\n").filter(Boolean).map((line, index) => <div key={index}>{line}</div>)}</div></div>}
                   <div className="community-profile-section">
                     <div className="section-kicker">SKILLS & EXPERTISE</div>
                     <div className="skill-list">
@@ -782,6 +885,116 @@ function CommunityPage({ student }) {
           </section>
         </div>
       )}
+    </section>
+  );
+}
+
+function NetworkCard({ person, busy, onConnect, onAccept, onIgnore, onRemove, variant }) {
+  return (
+    <article className="network-card">
+      <div className="network-card-top">
+        <div className="network-avatar">
+          {person.avatarUrl ? <img src={person.avatarUrl} alt="" onError={(event) => { event.currentTarget.style.display = "none"; }}/> : initials(person.fullName)}
+        </div>
+        <div className="network-card-identity">
+          <h3>{person.fullName}</h3>
+          <p>{person.headline || person.department || "Student"}{person.graduationYear ? ` · Class of ${person.graduationYear}` : ""}</p>
+          {person.location && <span><Icon name="pin" size={12}/>{person.location}</span>}
+        </div>
+      </div>
+      {person.skills?.length > 0 && <div className="network-card-skills">{person.skills.slice(0, 5).map((skill) => <span key={skill}>{skill}</span>)}{person.skills.length > 5 && <small>+{person.skills.length - 5}</small>}</div>}
+      <div className="network-card-actions">
+        {variant === "incoming" ? <>
+          <button className="button button-dark" type="button" disabled={busy} onClick={() => onAccept(person)}>{busy ? "Updating…" : "Accept"}</button>
+          <button className="button button-outline" type="button" disabled={busy} onClick={() => onIgnore(person)}>Ignore</button>
+        </> : variant === "outgoing" ? <button className="button button-outline" type="button" disabled={busy} onClick={() => onIgnore(person)}>Withdraw request</button>
+          : variant === "connections" ? <button className="button button-outline" type="button" disabled={busy} onClick={() => onRemove(person)}>Remove connection</button>
+          : <button className="button button-dark" type="button" disabled={busy} onClick={() => onConnect(person)}>＋ Connect</button>}
+      </div>
+    </article>
+  );
+}
+
+function NetworkPage() {
+  const [overview, setOverview] = useState({ connectionCount: 0, connections: [], incomingRequests: [], outgoingRequests: [], suggestions: [] });
+  const [query, setQuery] = useState("");
+  const [submittedQuery, setSubmittedQuery] = useState("");
+  const [view, setView] = useState("suggestions");
+  const [loading, setLoading] = useState(true);
+  const [busyId, setBusyId] = useState(null);
+  const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
+
+  async function refresh(searchText = submittedQuery) {
+    setLoading(true);
+    setError("");
+    try {
+      const params = new URLSearchParams();
+      if (searchText.trim()) params.set("q", searchText.trim());
+      const data = await api(`/api/network${params.size ? `?${params.toString()}` : ""}`);
+      setOverview(data);
+    } catch (requestError) {
+      setError(requestError.message || "Could not load your student network.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => { refresh(""); }, []);
+
+  async function runAction(person, action) {
+    setBusyId(person.studentId);
+    setError("");
+    setNotice("");
+    let path = `/api/network/${person.studentId}/request`;
+    let method = "POST";
+    if (action === "accept") { path = `/api/network/requests/${person.studentId}/accept`; method = "PATCH"; }
+    if (action === "ignore" || action === "withdraw") { path = `/api/network/requests/${person.studentId}`; method = "DELETE"; }
+    if (action === "remove") { path = `/api/network/connections/${person.studentId}`; method = "DELETE"; }
+    try {
+      await api(path, { method });
+      setNotice(action === "accept" ? "Connection request accepted." : action === "connect" ? "Connection request sent." : action === "remove" ? "Connection removed." : "Connection request updated.");
+      await refresh(submittedQuery);
+    } catch (requestError) {
+      setError(requestError.message || "Could not update this connection.");
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  const sections = [
+    { id: "suggestions", label: "People to connect", items: overview.suggestions, empty: "New students will appear here as the community grows." },
+    { id: "incoming", label: "Received requests", items: overview.incomingRequests, empty: "You are all caught up. New requests will appear here." },
+    { id: "outgoing", label: "Sent requests", items: overview.outgoingRequests, empty: "You have no pending outgoing requests." },
+    { id: "connections", label: "Your connections", items: overview.connections, empty: "Connect with students to grow your professional circle." },
+  ];
+  const active = sections.find((section) => section.id === view) || sections[0];
+
+  return (
+    <section className="network-page">
+      <div className="network-hero">
+        <div><span className="section-kicker">STUDENT NETWORK</span><h2>Build your circle.<br/><em>Grow together.</em></h2><p>Connect with students, discover shared skills and build relationships beyond the classroom.</p></div>
+        <div className="network-hero-stat"><strong>{overview.connectionCount || 0}</strong><span>your connections</span><small>{overview.incomingRequests?.length || 0} requests waiting</small></div>
+      </div>
+      {notice && <div className="community-feedback">{notice}<button type="button" onClick={() => setNotice("")}>Dismiss</button></div>}
+      {error && <div className="community-error" role="alert">{error}<button type="button" onClick={() => setError("")}>Dismiss</button></div>}
+      <form className="network-search" onSubmit={(event) => { event.preventDefault(); setSubmittedQuery(query); refresh(query); }}>
+        <Icon name="search" size={17}/><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search students by name, department, headline or location"/><button className="button button-dark" type="submit">Search</button>
+      </form>
+      <div className="network-layout">
+        <aside className="network-menu">
+          <span className="section-kicker">YOUR NETWORK</span>
+          {sections.map((section) => <button type="button" key={section.id} className={view === section.id ? "active" : ""} onClick={() => setView(section.id)}><span>{section.label}</span><b>{section.id === "connections" ? overview.connectionCount : section.items?.length || 0}</b></button>)}
+        </aside>
+        <div className="network-results">
+          <div className="network-results-heading"><div><span className="section-kicker">DISCOVER & CONNECT</span><h3>{active.label}</h3></div><button type="button" className="admin-refresh" onClick={() => refresh()}>↻ Refresh</button></div>
+          {loading ? <div className="admin-loading">Loading your student network…</div> : active.items?.length ? <div className="network-grid">
+            {active.items.map((person) => <NetworkCard key={person.studentId} person={person} busy={busyId === person.studentId}
+              variant={view} onConnect={(item) => runAction(item, "connect")} onAccept={(item) => runAction(item, "accept")}
+              onIgnore={(item) => runAction(item, view === "outgoing" ? "withdraw" : "ignore")} onRemove={(item) => runAction(item, "remove")}/>)}
+          </div> : <div className="network-empty"><span className="network-empty-icon"><Icon name="user" size={23}/></span><h3>Nothing here yet</h3><p>{active.empty}</p></div>}
+        </div>
+      </div>
     </section>
   );
 }
@@ -1108,6 +1321,7 @@ export default function App() {
           <button className={tab === "saved" ? "nav-link active" : "nav-link"} onClick={() => setTab("saved")}><Icon name="bookmark" size={16}/> Saved <span className="nav-count">{savedInternshipIds.length}</span></button>
           <button className={tab === "insights" ? "nav-link active" : "nav-link"} onClick={() => setTab("insights")}><Icon name="spark" size={16}/> Career insights</button>
           <button className={tab === "community" ? "nav-link active" : "nav-link"} onClick={() => setTab("community")}><Icon name="message" size={16}/> Community</button>
+          <button className={tab === "network" ? "nav-link active" : "nav-link"} onClick={() => setTab("network")}><Icon name="user" size={16}/> Network</button>
           {isAdmin && <button className={tab === "admin" ? "nav-link active admin-nav-link" : "nav-link admin-nav-link"} onClick={() => setTab("admin")}><Icon name="lock" size={16}/> Admin</button>}
         </nav>
         <div className="header-user account-header">
@@ -1139,7 +1353,7 @@ export default function App() {
 
         {notice && <div className="notice notice-info">{notice}</div>}
 
-        {tab !== "community" && tab !== "admin" && <section className="welcome-row">
+        {tab !== "community" && tab !== "network" && tab !== "admin" && <section className="welcome-row">
           <div>
             <div className="section-kicker">YOUR OPPORTUNITY SPACE</div>
             <h2>{tab === "discover" ? `A good next step, ${currentStudent.fullName.split(" ")[0]}.` : tab === "profile" ? "Your student profile" : tab === "applications" ? "Your applications" : tab === "saved" ? "Your saved internships" : tab === "community" ? "Student community" : tab === "admin" ? "Admin workspace" : "Your career insights"}</h2>
@@ -1149,6 +1363,7 @@ export default function App() {
         </section>}
 
         {tab === "community" && <CommunityPage student={currentStudent}/>}
+        {tab === "network" && <NetworkPage/>}
         {tab === "admin" && isAdmin && <AdminDashboard api={api} skills={skills}/>}
 
         {tab === "discover" && <>
@@ -1226,17 +1441,22 @@ export default function App() {
 
         {tab === "profile" && <section className="profile-layout">
           {editingProfile ? <ProfileEditor student={currentStudent} skills={skills} onCancel={() => { setEditingProfile(false); setProfileError(""); }} onSave={handleUpdateProfile} busy={profileBusy} error={profileError}/> : <div className="profile-card">
-            <div className="profile-banner"/>
+            <div className="profile-banner" style={currentStudent.coverImageUrl ? { backgroundImage: `linear-gradient(110deg, rgba(18,31,50,.12), rgba(18,31,50,.03)), url("${currentStudent.coverImageUrl}")` } : undefined}/>
             <div className="profile-content">
-              <div className="profile-avatar">{initials(currentStudent.fullName)}</div>
-              <h3>{currentStudent.fullName}</h3><p>{currentStudent.department || "Department not added"} · Class of {currentStudent.graduationYear || "Not specified"}</p>
+              <div className="profile-avatar">{currentStudent.avatarUrl ? <img src={currentStudent.avatarUrl} alt="" onError={(event) => { event.currentTarget.style.display = "none"; }}/> : initials(currentStudent.fullName)}</div>
+              <div className="profile-title-row"><div><h3>{currentStudent.fullName}</h3><p>{currentStudent.headline || currentStudent.department || "Student"} · Class of {currentStudent.graduationYear || "Not specified"}</p>{currentStudent.location && <span className="profile-location-line"><Icon name="pin" size={13}/>{currentStudent.location}</span>}</div><button className="button button-outline profile-edit-trigger" onClick={() => { setEditingProfile(true); setProfileError(""); }}>Edit profile <Icon name="arrow" size={14}/></button></div>
               <div className="profile-divider"/>
-              <button className="button button-outline profile-edit-trigger" onClick={() => { setEditingProfile(true); setProfileError(""); }}>Edit profile <Icon name="arrow" size={14}/></button>
-              <span className="profile-label">EMAIL ADDRESS</span><div className="profile-email">{currentStudent.email}</div>
-              <span className="profile-label profile-label-spaced">STUDENT ID</span><div className="profile-email">#{currentStudent.studentId}</div>
-              <span className="profile-label profile-label-spaced">SKILLS ({currentStudent.skills?.length || 0})</span>
-              <div className="skill-list profile-skills">{(currentStudent.skills || []).map((skill) => <span className="skill-chip matched" key={skill}>{skill}</span>)}</div>
-              <p className="profile-footnote">Your account profile is stored in the application database. Keep your skills up to date to improve the relevance of your matches.</p>
+              <div className="profile-account-grid"><div><span className="profile-label">EMAIL ADDRESS</span><div className="profile-email">{currentStudent.email}</div></div><div><span className="profile-label">STUDENT ID</span><div className="profile-email">#{currentStudent.studentId}</div></div></div>
+              {currentStudent.about && <div className="profile-detail-section"><span className="profile-label">ABOUT</span><p className="profile-about-text">{currentStudent.about}</p></div>}
+              <div className="profile-detail-section"><span className="profile-label">SKILLS ({currentStudent.skills?.length || 0})</span><div className="skill-list profile-skills">{(currentStudent.skills || []).map((skill) => <span className="skill-chip matched" key={skill}>{skill}</span>)}</div></div>
+              {(currentStudent.linkedinUrl || currentStudent.githubUrl || currentStudent.portfolioUrl) && <div className="profile-detail-section"><span className="profile-label">LINKS</span><div className="profile-social-links">
+                {currentStudent.linkedinUrl && <a href={currentStudent.linkedinUrl} target="_blank" rel="noreferrer">LinkedIn ↗</a>}
+                {currentStudent.githubUrl && <a href={currentStudent.githubUrl} target="_blank" rel="noreferrer">GitHub ↗</a>}
+                {currentStudent.portfolioUrl && <a href={currentStudent.portfolioUrl} target="_blank" rel="noreferrer">Portfolio ↗</a>}
+              </div></div>}
+              {currentStudent.projects && <div className="profile-detail-section"><span className="profile-label">PROJECTS</span><div className="profile-lines">{currentStudent.projects.split("\\n").filter(Boolean).map((line, index) => <div key={index}>{line}</div>)}</div></div>}
+              {currentStudent.achievements && <div className="profile-detail-section"><span className="profile-label">ACHIEVEMENTS</span><div className="profile-lines">{currentStudent.achievements.split("\\n").filter(Boolean).map((line, index) => <div key={index}>{line}</div>)}</div></div>}
+              <p className="profile-footnote">Your academic details, skills and portfolio help other students understand your interests. Your email and saved internships remain private.</p>
             </div>
           </div>}
           <div className="profile-side">
