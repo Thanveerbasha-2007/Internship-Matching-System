@@ -40,6 +40,25 @@ Authenticates an existing student account.
 
 On success the server sets an HttpOnly session cookie and returns the student's profile. Incorrect credentials return `401 Unauthorized`.
 
+### `GET /api/auth/config`
+
+Returns public sign-in configuration used by the frontend. The Google client ID is public by design; no client secret is returned.
+
+### `POST /api/auth/google`
+
+Verifies a Google Identity Services ID token and signs in the corresponding student. If the verified email already belongs to a student, that existing account is used. Otherwise a student profile is created. Optional academic fields are accepted for first-time sign-up.
+
+```json
+{
+  "credential": "GOOGLE_ID_TOKEN_FROM_THE_BROWSER",
+  "department": "Computer Science",
+  "graduationYear": 2027,
+  "skillIds": [1, 2, 3]
+}
+```
+
+The backend verifies the token signature, issuer, audience, expiry, and verified-email claim. The configured `GOOGLE_CLIENT_ID` must match the ID token audience. The response is the student profile and the server sets the same HttpOnly session cookie used by password login.
+
 ### `GET /api/auth/me`
 
 Returns the profile belonging to the current session. Returns `401 Unauthorized` when the browser is not signed in.
@@ -144,5 +163,6 @@ Requires the matching student's session. Returns the applications submitted by t
 - `DB_URL`, `DB_USERNAME`, `DB_PASSWORD`: database connection.
 - `CORS_ALLOWED_ORIGINS`: explicit allowed frontend origins for local development.
 - `SESSION_COOKIE_SECURE`: set to `true` when serving over HTTPS.
+- `GOOGLE_CLIENT_ID`: Google OAuth 2.0 Web application client ID used to verify Google sign-in tokens.
 
 Never commit real credentials or passwords to the repository. Use environment variables or your hosting provider's secret manager.
