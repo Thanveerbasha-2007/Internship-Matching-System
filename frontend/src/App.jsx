@@ -843,7 +843,7 @@ function CommunityPage({ student }) {
                     {selectedProfile.data.portfolioUrl && <a href={selectedProfile.data.portfolioUrl} target="_blank" rel="noreferrer">Portfolio ↗</a>}
                   </div></div>}
                   {selectedProfile.data.projects && <div className="community-profile-section"><div className="section-kicker">PROJECTS</div><div className="profile-lines">{selectedProfile.data.projects.split(/\r?\n/).filter(Boolean).map((line, index) => <div key={index}>{line}</div>)}</div></div>}
-                  {selectedProfile.data.achievements && <div className="community-profile-section"><div className="section-kicker">ACHIEVEMENTS</div><div className="profile-lines">{selectedProfile.data.achievements.split("\\n").filter(Boolean).map((line, index) => <div key={index}>{line}</div>)}</div></div>}
+                  {selectedProfile.data.achievements && <div className="community-profile-section"><div className="section-kicker">ACHIEVEMENTS</div><div className="profile-lines">{selectedProfile.data.achievements.split(/\r?\n/).filter(Boolean).map((line, index) => <div key={index}>{line}</div>)}</div></div>}
                   <div className="community-profile-section">
                     <div className="section-kicker">SKILLS & EXPERTISE</div>
                     <div className="skill-list">
@@ -1025,8 +1025,8 @@ function NetworkPage() {
                   {selectedProfile.data.githubUrl && <a href={selectedProfile.data.githubUrl} target="_blank" rel="noreferrer">GitHub ↗</a>}
                   {selectedProfile.data.portfolioUrl && <a href={selectedProfile.data.portfolioUrl} target="_blank" rel="noreferrer">Portfolio ↗</a>}
                 </div></div>}
-                {selectedProfile.data.projects && <div className="community-profile-section"><div className="section-kicker">PROJECTS</div><div className="profile-lines">{selectedProfile.data.projects.split(/\\r?\\n/).filter(Boolean).map((line, index) => <div key={index}>{line}</div>)}</div></div>}
-                {selectedProfile.data.achievements && <div className="community-profile-section"><div className="section-kicker">ACHIEVEMENTS</div><div className="profile-lines">{selectedProfile.data.achievements.split(/\\r?\\n/).filter(Boolean).map((line, index) => <div key={index}>{line}</div>)}</div></div>}
+                {selectedProfile.data.projects && <div className="community-profile-section"><div className="section-kicker">PROJECTS</div><div className="profile-lines">{selectedProfile.data.projects.split(/\r?\n/).filter(Boolean).map((line, index) => <div key={index}>{line}</div>)}</div></div>}
+                {selectedProfile.data.achievements && <div className="community-profile-section"><div className="section-kicker">ACHIEVEMENTS</div><div className="profile-lines">{selectedProfile.data.achievements.split(/\r?\n/).filter(Boolean).map((line, index) => <div key={index}>{line}</div>)}</div></div>}
               </div>
             </>}
         </section>
@@ -1491,7 +1491,7 @@ export default function App() {
                 {currentStudent.portfolioUrl && <a href={currentStudent.portfolioUrl} target="_blank" rel="noreferrer">Portfolio ↗</a>}
               </div></div>}
               {currentStudent.projects && <div className="profile-detail-section"><span className="profile-label">PROJECTS</span><div className="profile-lines">{currentStudent.projects.split(/\r?\n/).filter(Boolean).map((line, index) => <div key={index}>{line}</div>)}</div></div>}
-              {currentStudent.achievements && <div className="profile-detail-section"><span className="profile-label">ACHIEVEMENTS</span><div className="profile-lines">{currentStudent.achievements.split("\\n").filter(Boolean).map((line, index) => <div key={index}>{line}</div>)}</div></div>}
+              {currentStudent.achievements && <div className="profile-detail-section"><span className="profile-label">ACHIEVEMENTS</span><div className="profile-lines">{currentStudent.achievements.split(/\r?\n/).filter(Boolean).map((line, index) => <div key={index}>{line}</div>)}</div></div>}
               <p className="profile-footnote">Your academic details, skills and portfolio help other students understand your interests. Your email and saved internships remain private.</p>
             </div>
           </div>}
