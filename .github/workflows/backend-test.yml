@@ -63,6 +63,7 @@ jobs:
           DB_USERNAME: root
           DB_PASSWORD: root
           CORS_ALLOWED_ORIGINS: http://localhost:5173
+          ADMIN_EMAILS: test-student@example.com
         run: |
           nohup mvn -B -f backend/pom.xml spring-boot:run > /tmp/internship-api.log 2>&1 &
           echo $! > /tmp/internship-api.pid
@@ -90,6 +91,9 @@ jobs:
           saved_unauthenticated_status=$(curl --silent --output /tmp/saved-unauthenticated.json --write-out "%{http_code}" http://127.0.0.1:8080/api/students/1/saved-internships)
           test "$saved_unauthenticated_status" = "401"
 
+          admin_unauthenticated_status=$(curl --silent --output /tmp/admin-unauthenticated.json --write-out "%{http_code}" http://127.0.0.1:8080/api/admin/overview)
+          test "$admin_unauthenticated_status" = "401"
+
           curl --fail --silent http://127.0.0.1:8080/api/auth/config | tee /tmp/auth-config.json
           grep -q '"googleClientId":""' /tmp/auth-config.json
 
@@ -109,6 +113,35 @@ jobs:
           grep -q "Test Student" /tmp/registered.json
           student_id=$(jq -r '.studentId' /tmp/registered.json)
           test "$student_id" != "null"
+
+          curl --fail --silent --cookie /tmp/student.cookies http://127.0.0.1:8080/api/admin/me | jq -e '.isAdmin == true'
+          curl --fail --silent --cookie /tmp/student.cookies http://127.0.0.1:8080/api/admin/overview | jq -e '.students >= 1 and .openInternships >= 1'
+          internship_status=$(curl --silent --cookie /tmp/student.cookies --output /tmp/admin-internship.json --write-out "%{http_code}" \
+            --request POST http://127.0.0.1:8080/api/admin/internships \
+            --header "Content-Type: application/json" \
+            --data '{"title":"CI Admin Test Internship","companyName":"InternMatch QA","description":"A test listing created by the admin integration workflow.","location":"Remote","workMode":"REMOTE","durationWeeks":12,"stipendAmount":18000,"applicationDeadline":"2027-03-30","status":"OPEN","requiredSkillIds":[1,2]}')
+          test "$internship_status" = "201"
+          admin_internship_id=$(jq -r '.internshipId' /tmp/admin-internship.json)
+          test "$admin_internship_id" != "null"
+          grep -q "CI Admin Test Internship" /tmp/admin-internship.json
+
+          admin_update_status=$(curl --silent --cookie /tmp/student.cookies --output /tmp/admin-internship-updated.json --write-out "%{http_code}" \
+            --request PUT "http://127.0.0.1:8080/api/admin/internships/$admin_internship_id" \
+            --header "Content-Type: application/json" \
+            --data '{"title":"CI Admin Test Internship Updated","companyName":"InternMatch QA","description":"Updated through the admin API.","location":"Hybrid","workMode":"HYBRID","durationWeeks":16,"stipendAmount":22000,"applicationDeadline":"2027-03-30","status":"OPEN","requiredSkillIds":[1]}')
+          test "$admin_update_status" = "200"
+          grep -q "CI Admin Test Internship Updated" /tmp/admin-internship-updated.json
+          curl --fail --silent --cookie /tmp/student.cookies --request PATCH "http://127.0.0.1:8080/api/admin/internships/$admin_internship_id/status" \
+            --header "Content-Type: application/json" --data '{"status":"CLOSED"}' | grep -q "status updated"
+          curl --fail --silent --cookie /tmp/student.cookies "http://127.0.0.1:8080/api/admin/internships" | jq -e --argjson id "$admin_internship_id" 'any(.[]; .internshipId == $id and .status == "CLOSED")'
+
+          regular_student_status=$(curl --silent --cookie-jar /tmp/regular-student.cookies --output /tmp/regular-student.json --write-out "%{http_code}" \
+            --request POST http://127.0.0.1:8080/api/auth/register \
+            --header "Content-Type: application/json" \
+            --data '{"fullName":"Regular Student","email":"regular-student@example.com","password":"StudentPass!234","department":"Computer Science","graduationYear":2027,"skillIds":[1]}')
+          test "$regular_student_status" = "201"
+          regular_admin_status=$(curl --silent --cookie /tmp/regular-student.cookies --output /tmp/regular-admin.json --write-out "%{http_code}" http://127.0.0.1:8080/api/admin/overview)
+          test "$regular_admin_status" = "403"
 
           curl --fail --silent --cookie /tmp/student.cookies http://127.0.0.1:8080/api/auth/me | tee /tmp/me.json
           grep -q "Test Student" /tmp/me.json
@@ -184,6 +217,18 @@ jobs:
             --data '{"reason":"OTHER","details":"Testing the report workflow"}')
           test "$report_status" = "200"
 
+          curl --fail --silent --cookie /tmp/student.cookies "http://127.0.0.1:8080/api/admin/reports" | tee /tmp/admin-reports.json
+          report_id=$(jq -r '.[0].reportId' /tmp/admin-reports.json)
+          test "$report_id" != "null"
+          curl --fail --silent --cookie /tmp/student.cookies --request DELETE "http://127.0.0.1:8080/api/admin/reports/$report_id" | grep -q "Report dismissed"
+
+          experience_id=$(jq -r '.postId' /tmp/community-experience.json)
+          second_report_status=$(curl --silent --cookie /tmp/student.cookies --output /tmp/community-experience-report.json --write-out "%{http_code}" \
+            --request POST "http://127.0.0.1:8080/api/community/posts/$experience_id/report" \
+            --header "Content-Type: application/json" \
+            --data '{"reason":"OTHER","details":"Testing admin removal"}')
+          test "$second_report_status" = "200"
+
           edit_post_status=$(curl --silent --cookie /tmp/student.cookies --output /tmp/community-edited.json --write-out "%{http_code}" \
             --request PUT "http://127.0.0.1:8080/api/community/posts/$post_id" \
             --header "Content-Type: application/json" \
@@ -192,6 +237,9 @@ jobs:
           grep -q "Updated CI internship discussion" /tmp/community-edited.json
 
           curl --fail --silent --cookie /tmp/student.cookies --request DELETE "http://127.0.0.1:8080/api/community/comments/$comment_id" | grep -q "Comment deleted"
+          curl --fail --silent --cookie /tmp/student.cookies --request DELETE "http://127.0.0.1:8080/api/admin/community/posts/$experience_id" | grep -q "Community post removed"
+          moderated_post_status=$(curl --silent --cookie /tmp/student.cookies --output /tmp/community-moderated.json --write-out "%{http_code}" "http://127.0.0.1:8080/api/community/posts/$experience_id")
+          test "$moderated_post_status" = "404"
           curl --fail --silent --cookie /tmp/student.cookies --request DELETE "http://127.0.0.1:8080/api/community/posts/$post_id" | grep -q "Post deleted"
           deleted_post_status=$(curl --silent --cookie /tmp/student.cookies --output /tmp/community-deleted.json --write-out "%{http_code}" "http://127.0.0.1:8080/api/community/posts/$post_id")
           test "$deleted_post_status" = "404"

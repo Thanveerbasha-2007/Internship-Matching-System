@@ -275,3 +275,22 @@ Records one report per student per post. The accepted reasons are `SPAM`, `HARAS
 - `GOOGLE_CLIENT_ID`: Google OAuth 2.0 Web application client ID used to verify Google sign-in tokens.
 
 Never commit real credentials or passwords to the repository. Use environment variables or your hosting provider's secret manager.
+
+
+## Administrator API
+
+All administrator endpoints require a signed-in session and an email match against the server-side `ADMIN_EMAILS` allowlist. If the current student is not allowlisted, management endpoints return HTTP 403.
+
+| Method | Endpoint | Purpose |
+|---|---|---|
+| GET | `/api/admin/me` | Check whether the signed-in student is an administrator |
+| GET | `/api/admin/overview` | Platform counts for the admin dashboard |
+| GET | `/api/admin/internships` | List all internship listings, including closed listings |
+| POST | `/api/admin/internships` | Create an internship with required skill IDs |
+| PUT | `/api/admin/internships/{internshipId}` | Update an internship and its required skills |
+| PATCH | `/api/admin/internships/{internshipId}/status` | Open or close an internship |
+| GET | `/api/admin/reports` | List community reports with post context |
+| DELETE | `/api/admin/reports/{reportId}` | Dismiss a report |
+| DELETE | `/api/admin/community/posts/{postId}` | Remove a reported post from the visible feed |
+
+Internship create/update bodies accept `title`, `companyName`, `description`, `location`, `workMode`, `durationWeeks`, `stipendAmount`, `applicationDeadline`, `status`, and `requiredSkillIds`. Closing rather than deleting an internship preserves application records.

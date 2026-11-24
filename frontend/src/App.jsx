@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import AdminDashboard from "./AdminDashboard.jsx";
 
 const API_BASE = (import.meta.env.VITE_API_BASE_URL || "").replace(/\/$/, "");
 
@@ -546,6 +547,7 @@ function CommunityPage({ student }) {
   }
 
   const totalComments = posts.reduce((sum, post) => sum + Number(post.commentCount || 0), 0);
+  const myPosts = posts.filter((post) => post.authorStudentId === student.studentId);
   const postCountByCategory = posts.reduce((counts, post) => {
     counts[post.category] = (counts[post.category] || 0) + 1;
     return counts;
@@ -569,6 +571,30 @@ function CommunityPage({ student }) {
       {error && <div className="community-error" role="alert">{error}<button type="button" onClick={() => setError("")}>Dismiss</button></div>}
 
       <div className="community-layout">
+        <aside className="community-profile-rail">
+          <div className="community-rail-profile">
+            <div className="community-rail-cover"/>
+            <div className="community-rail-identity">
+              <button type="button" className="community-rail-avatar" onClick={() => openStudentProfile(student.studentId)}>{initials(student.fullName)}</button>
+              <h3>{student.fullName}</h3>
+              <p>{student.department || "Student"}{student.graduationYear ? ` · Class of ${student.graduationYear}` : ""}</p>
+              <span>Building skills. Finding opportunities.</span>
+            </div>
+            <div className="community-rail-stats">
+              <div><span>My discussions</span><b>{myPosts.length}</b></div>
+              <div><span>Replies in this feed</span><b>{totalComments}</b></div>
+            </div>
+            <button type="button" className="community-rail-view" onClick={() => openStudentProfile(student.studentId)}>View my community profile <span>→</span></button>
+          </div>
+          <div className="community-rail-topics">
+            <div className="community-rail-heading">EXPLORE TOPICS</div>
+            {COMMUNITY_CATEGORIES.map((item) => (
+              <button type="button" key={item.value} className={category === item.value ? "active" : ""} onClick={() => setCategory(item.value)}>
+                <span>{item.label}</span><b>{item.value === "ALL" ? posts.length : (postCountByCategory[item.value] || 0)}</b>
+              </button>
+            ))}
+          </div>
+        </aside>
         <main className="community-main">
           <button className="community-composer-trigger" type="button" onClick={openComposer}>
             <span className="community-trigger-avatar">{initials(student.fullName)}</span>
@@ -788,6 +814,7 @@ export default function App() {
   const [applications, setApplications] = useState([]);
   const [notice, setNotice] = useState("");
   const [selectedInternship, setSelectedInternship] = useState(null);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -821,6 +848,18 @@ export default function App() {
     load();
     return () => { active = false; };
   }, []);
+
+  useEffect(() => {
+    let active = true;
+    if (!currentStudent || !apiOnline) {
+      setIsAdmin(false);
+      return () => { active = false; };
+    }
+    api("/api/admin/me")
+      .then((result) => { if (active) setIsAdmin(Boolean(result?.isAdmin)); })
+      .catch(() => { if (active) setIsAdmin(false); });
+    return () => { active = false; };
+  }, [apiOnline, currentStudent]);
 
   useEffect(() => {
     let active = true;
@@ -1069,6 +1108,7 @@ export default function App() {
           <button className={tab === "saved" ? "nav-link active" : "nav-link"} onClick={() => setTab("saved")}><Icon name="bookmark" size={16}/> Saved <span className="nav-count">{savedInternshipIds.length}</span></button>
           <button className={tab === "insights" ? "nav-link active" : "nav-link"} onClick={() => setTab("insights")}><Icon name="spark" size={16}/> Career insights</button>
           <button className={tab === "community" ? "nav-link active" : "nav-link"} onClick={() => setTab("community")}><Icon name="message" size={16}/> Community</button>
+          {isAdmin && <button className={tab === "admin" ? "nav-link active admin-nav-link" : "nav-link admin-nav-link"} onClick={() => setTab("admin")}><Icon name="lock" size={16}/> Admin</button>}
         </nav>
         <div className="header-user account-header">
           <div className="avatar">{initials(currentStudent.fullName)}</div>
@@ -1078,7 +1118,7 @@ export default function App() {
       </header>
 
       <main id="top">
-        <section className="hero">
+        {tab === "discover" && <section className="hero">
           <div className="hero-copy">
             <div className="eyebrow"><span className="eyebrow-dot"/> YOUR SKILLS. YOUR NEXT STEP.</div>
             <h1>Find work that<br/><em>fits who you are.</em></h1>
@@ -1095,20 +1135,21 @@ export default function App() {
             <div className="art-dot dot-one"/><div className="art-dot dot-two"/><div className="art-dot dot-three"/>
           </div>
           <div className="hero-bottom"><span>MADE FOR STUDENTS BUILDING WHAT'S NEXT</span><span>DISCOVER · MATCH · APPLY</span></div>
-        </section>
+        </section>}
 
         {notice && <div className="notice notice-info">{notice}</div>}
 
-        <section className="welcome-row">
+        {tab !== "community" && tab !== "admin" && <section className="welcome-row">
           <div>
             <div className="section-kicker">YOUR OPPORTUNITY SPACE</div>
-            <h2>{tab === "discover" ? `A good next step, ${currentStudent.fullName.split(" ")[0]}.` : tab === "profile" ? "Your student profile" : tab === "applications" ? "Your applications" : tab === "saved" ? "Your saved internships" : tab === "community" ? "Student community" : "Your career insights"}</h2>
-            <p>{tab === "discover" ? "A shortlist shaped around the skills you already have." : tab === "profile" ? "Your academic details and skills shape your recommendations." : tab === "applications" ? "Keep track of the opportunities you've applied to." : tab === "saved" ? "Opportunities you bookmarked to revisit later." : tab === "community" ? "Ask questions, share experiences and help other students navigate internships." : "See which skills could unlock more internship opportunities."}</p>
+            <h2>{tab === "discover" ? `A good next step, ${currentStudent.fullName.split(" ")[0]}.` : tab === "profile" ? "Your student profile" : tab === "applications" ? "Your applications" : tab === "saved" ? "Your saved internships" : tab === "community" ? "Student community" : tab === "admin" ? "Admin workspace" : "Your career insights"}</h2>
+            <p>{tab === "discover" ? "A shortlist shaped around the skills you already have." : tab === "profile" ? "Your academic details and skills shape your recommendations." : tab === "applications" ? "Keep track of the opportunities you've applied to." : tab === "saved" ? "Opportunities you bookmarked to revisit later." : tab === "community" ? "Ask questions, share experiences and help other students navigate internships." : tab === "admin" ? "Manage internship opportunities and keep the student community safe." : "See which skills could unlock more internship opportunities."}</p>
           </div>
           <div className="mode-indicator"><span className="status-light live"/>Signed in · Live account</div>
-        </section>
+        </section>}
 
         {tab === "community" && <CommunityPage student={currentStudent}/>}
+        {tab === "admin" && isAdmin && <AdminDashboard api={api} skills={skills}/>}
 
         {tab === "discover" && <>
           <section className="stats-grid">
@@ -1215,7 +1256,7 @@ export default function App() {
             <div className="empty-state"><span className="empty-icon"><Icon name="bookmark" size={25}/></span><h3>{applications.length ? "No applications in this status" : "No applications yet"}</h3><p>{applications.length ? "Choose another status to see the rest of your applications." : "Explore the internships that fit your skills and apply when you're ready."}</p><button className="button button-dark" onClick={() => applications.length ? setApplicationFilter("all") : setTab("discover")}>{applications.length ? "Show all applications" : "Explore internships"} <Icon name="arrow" size={15}/></button></div>}
         </section>}
 
-        <section className="how-section">
+        {tab === "discover" && <section className="how-section">
           <div className="how-heading"><div className="section-kicker">SIMPLE BY DESIGN</div><h2>From skills to next steps.</h2><p>A clearer way to move from what you know to where you could go.</p></div>
           <div className="how-steps">
             <div className="how-step"><span>01</span><div className="how-step-icon"><Icon name="user" size={20}/></div><h3>Build your profile</h3><p>Bring your skills together in one place.</p></div>
@@ -1224,7 +1265,7 @@ export default function App() {
             <div className="step-line"/>
             <div className="how-step"><span>03</span><div className="how-step-icon"><Icon name="arrow" size={20}/></div><h3>Take the next step</h3><p>Explore opportunities and apply with confidence.</p></div>
           </div>
-        </section>
+        </section>}
       </main>
 
       <footer className="site-footer"><a className="brand footer-brand" href="#top"><span className="brand-symbol"><Icon name="spark" size={17}/></span><span>intern<span>match</span></span></a><span>Helping skills find the right opportunity.</span><span>Internship Matching System · Student project</span></footer>
