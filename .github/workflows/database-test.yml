@@ -97,7 +97,7 @@ jobs:
               OR (st.email = 'kabir.mehta@example.com' AND i.title = 'Machine Learning Intern' AND i.company_name = 'ModelBridge')
               OR (st.email = 'nisha.verma@example.com' AND i.title = 'Data Analyst Intern' AND i.company_name = 'InsightWorks');
           ")
-          test "$result" = "9"
+          test "$result" = "12"
           echo "Expected matching skill associations found: $result"
 
       - name: Verify seed script is repeatable
