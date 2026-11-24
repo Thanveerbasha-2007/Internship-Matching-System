@@ -134,6 +134,16 @@ Removes the internship from the student's saved list.
 
 All profile and saved-internship routes require the matching student's session. Accessing another student's ID returns `403 Forbidden`.
 
+### `GET /api/community/students/{studentId}`
+
+Returns a student profile for the signed-in community viewer. The response deliberately excludes email addresses and private account data. It includes:
+- `studentId`, `fullName`, `department`, `graduationYear`, `skills`
+- `discussionCount` and `commentCount` for visible posts and authored replies
+- `experiencePosts` containing up to five visible posts in the `EXPERIENCES` category
+- `recentDiscussions` containing up to ten recent visible discussions
+
+Only community-visible posts are included. Students cannot use this route to view another student's saved internships, applications, login credentials, or email address.
+
 ## Internships
 
 These read-only opportunity endpoints are public.
@@ -179,7 +189,7 @@ Requires the matching student's session. Returns the applications submitted by t
 
 ## Student community
 
-All community endpoints require a signed-in student session. The feed shows student names and departments as authors; email addresses are not included in community responses.
+All community endpoints require a signed-in student session. The feed shows student names and departments as authors; email addresses are not included in community responses. Selecting an author's name opens their community profile with their skills, academic details, experience posts, discussion history, and activity counts.
 
 ### `GET /api/community/posts`
 
