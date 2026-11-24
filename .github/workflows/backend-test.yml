@@ -149,6 +149,14 @@ jobs:
             --header "Content-Type: application/json" \
             --data '{"email":"test-student@example.com","password":"StudentPass!234"}')
           test "$student_network_login_status" = "200"
+          sender_me_status=$(curl --silent --cookie /tmp.student-network.cookies --output /tmp/student-network-me.json --write-out "%{http_code}" http://127.0.0.1:8080/api/auth/me)
+          echo "Sender session verification HTTP status: $sender_me_status"
+          cat /tmp/student-network-me.json
+          test "$sender_me_status" = "200"
+          network_get_status=$(curl --silent --cookie /tmp.student-network.cookies --output /tmp/network-overview-before.json --write-out "%{http_code}" http://127.0.0.1:8080/api/network)
+          echo "Network overview HTTP status before request: $network_get_status"
+          cat /tmp/network-overview-before.json
+          test "$network_get_status" = "200"
           request_status=$(curl --silent --cookie /tmp.student-network.cookies --output /tmp/connection-request.json --write-out "%{http_code}" \
             --request POST "http://127.0.0.1:8080/api/network/$regular_student_id/request")
           echo "Connection request HTTP status: $request_status"
