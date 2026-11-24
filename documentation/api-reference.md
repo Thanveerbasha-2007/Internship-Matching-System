@@ -1,16 +1,58 @@
 # REST API Reference
 
-Base URL for local development: `http://localhost:8080`
+Production website: https://internship-api-production-5a538a6f.up.railway.app
 
-All endpoints are currently part of the project prototype. The API does not yet include user authentication or authorization; do not use real student data until account security and access controls are implemented.
+Local API base URL: `http://localhost:8080`
+
+The API uses an HttpOnly session cookie for student sign-in. The browser sends this cookie automatically to the same-origin API. Passwords are stored as BCrypt hashes; they are never returned by an endpoint.
+
+## Authentication
+
+### `POST /api/auth/register`
+
+Creates a student profile and account, then signs the student in.
+
+Example request:
+
+```json
+{
+  "fullName": "Aarav Sharma",
+  "email": "aarav.sharma@example.com",
+  "password": "choose-a-password",
+  "department": "Computer Science",
+  "graduationYear": 2027,
+  "skillIds": [1, 2, 3]
+}
+```
+
+Password must contain at least 8 characters. `skillIds` is optional. The response is the new student profile.
+
+### `POST /api/auth/login`
+
+Authenticates an existing student account.
+
+```json
+{
+  "email": "aarav.sharma@example.com",
+  "password": "choose-a-password"
+}
+```
+
+On success the server sets an HttpOnly session cookie and returns the student's profile. Incorrect credentials return `401 Unauthorized`.
+
+### `GET /api/auth/me`
+
+Returns the profile belonging to the current session. Returns `401 Unauthorized` when the browser is not signed in.
+
+### `POST /api/auth/logout`
+
+Invalidates the current server-side session.
 
 ## Health
 
 ### `GET /api/health`
 
 Checks the Spring Boot process and its MySQL connection.
-
-Example response:
 
 ```json
 {
@@ -24,35 +66,31 @@ Example response:
 
 ### `GET /api/skills`
 
-Returns the available skills and categories.
+Returns the available skills and categories. This catalogue is public so it can be used by the registration form.
 
 ## Students
 
+Student endpoints require a valid session. A student can access only their own profile and data.
+
 ### `GET /api/students`
 
-Returns student profiles and associated skills. The current endpoint is intended for the sample-data prototype and must be access-controlled before real profiles are stored.
+Returns the current signed-in student's profile as a one-item list.
 
 ### `GET /api/students/{studentId}`
 
-Returns one student profile.
+Returns the current student's profile. Requesting another student's ID returns `403 Forbidden`.
 
-### `POST /api/students`
-
-Creates a student profile and associates the supplied skill IDs.
-
-Example request:
-
-```json
-{
-  "fullName": "Aarav Sharma",
-  "email": "aarav.sharma@example.com",
-  "department": "Computer Science",
-  "graduationYear": 2027,
-  "skillIds": [1, 2, 3]
-}
-```
+A profile contains:
+- `studentId`
+- `fullName`
+- `email`
+- `department`
+- `graduationYear`
+- `skills`
 
 ## Internships
+
+These read-only opportunity endpoints are public.
 
 ### `GET /api/internships`
 
@@ -62,33 +100,25 @@ Returns opportunities with status `OPEN` whose deadline has not passed.
 
 Returns one internship and its required skills.
 
+The internship detail response includes the company, role title, description, location, work mode, duration, stipend, deadline, status, and required skills.
+
 ## Recommendations
 
 ### `GET /api/students/{studentId}/recommendations`
 
-Returns active internships ranked by the current skill-overlap score.
-
-Current baseline formula:
+Requires the matching student's session. Returns active internships ranked by the current skill-overlap score.
 
 ```text
 match score = (matched required skills / total distinct required skills) * 100
 ```
 
-A skill is considered matched when its name appears in both the student's skill profile and the internship's required skill list. Skill name matching is case-insensitive. This is an explainable baseline, not a machine-learning model.
-
-Each response includes:
-- `requiredSkills`
-- `matchedSkills`
-- `missingSkills`
-- `matchScore`
+Each response includes `requiredSkills`, `matchedSkills`, `missingSkills`, and `matchScore`. This is a transparent rule-based baseline, not a machine-learning model.
 
 ## Applications
 
 ### `POST /api/applications`
 
-Creates an application if the student exists, the internship is open, the deadline has not passed, and the student has not already applied.
-
-Example request:
+Requires a signed-in student. The `studentId` in the request must match the session owner. The application is created only when the internship is open, its deadline has not passed, and the student has not already applied.
 
 ```json
 {
@@ -99,20 +129,20 @@ Example request:
 
 ### `GET /api/students/{studentId}/applications`
 
-Returns the applications submitted by one student.
+Requires the matching student's session. Returns the applications submitted by that student.
 
-## Error responses
+## Common errors
 
-- `400 Bad Request`: request validation failed or the internship is not accepting applications.
+- `400 Bad Request`: validation failed or the internship is not accepting applications.
+- `401 Unauthorized`: missing or expired student session, or invalid login credentials.
+- `403 Forbidden`: request attempts to access another student's profile or submit an application for another student.
 - `404 Not Found`: requested student or internship does not exist.
-- `409 Conflict`: unique constraint violation, such as duplicate email or duplicate application.
+- `409 Conflict`: duplicate email or duplicate application.
 
 ## Configuration
 
-The backend reads its database connection from environment variables:
-- `DB_URL`
-- `DB_USERNAME`
-- `DB_PASSWORD`
-- `CORS_ALLOWED_ORIGINS`
+- `DB_URL`, `DB_USERNAME`, `DB_PASSWORD`: database connection.
+- `CORS_ALLOWED_ORIGINS`: explicit allowed frontend origins for local development.
+- `SESSION_COOKIE_SECURE`: set to `true` when serving over HTTPS.
 
-Never commit real credentials to the repository. Use environment variables or your hosting provider's secret manager.
+Never commit real credentials or passwords to the repository. Use environment variables or your hosting provider's secret manager.
