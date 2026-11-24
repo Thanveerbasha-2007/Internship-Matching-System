@@ -39,13 +39,19 @@ The application maintains student skill profiles, stores internship requirements
 - Edit your profile, academic details, and skill set
 - Compare matched and missing internship skills and view ranked recommendations
 - Submit applications and filter the application tracker by status
-- Session-protected profile, saved-internship, recommendation, and application endpoints
+- Student community for internship questions, experience sharing, interview preparation, career advice, and student-life discussions
+- Create and edit discussions, comment, upvote, and report posts; students can delete their own posts and comments
+- Session-protected profile, saved-internship, recommendation, application, and community endpoints
 
 ## Student accounts and privacy
 
-Students can create an account using their name, email, password, department, graduation year, and selected skills, or use Google sign-in. Google ID tokens are verified by the backend against the configured Google OAuth client ID; the app accepts only verified Google email addresses. A verified Google email links to an existing student account with the same email, or creates a new student account. When signing up with Google from the Create account tab, the department, graduation year, and selected skills are also saved. Passwords for password-based accounts are stored as BCrypt hashes. The browser receives an HttpOnly session cookie; profile, recommendation, and application endpoints are restricted to the signed-in student. Open internship listings and the skill catalogue remain public.
+Students can create an account using their name, email, password, department, graduation year, and selected skills, or use Google sign-in. Google ID tokens are verified by the backend against the configured Google OAuth client ID; the app accepts only verified Google email addresses. A verified Google email links to an existing student account with the same email, or creates a new student account. When signing up with Google from the Create account tab, the department, graduation year, and selected skills are also saved. Passwords for password-based accounts are stored as BCrypt hashes. The browser receives an HttpOnly session cookie; profile, recommendation, application, and community write endpoints are restricted to signed-in students. Community authors are identified by their student name and department, not by their email address.
 
 Demo records in the database are fictional seed data and are not login accounts. Register with your own email to create a personal account.
+
+## Student community
+
+The signed-in student community lets students ask internship questions, share internship experiences, discuss interview preparation, exchange career advice, and post about student life. Students can create and edit their own discussions, upvote posts, comment, delete their own comments, and report posts. The feed can be searched, filtered by category, and sorted by newest or top-voted. Reports are recorded in the database for review; a dedicated moderator/admin review dashboard is not part of this prototype yet. Keep personal contact details and confidential material out of public posts.
 
 ## Matching baseline
 
@@ -160,4 +166,4 @@ This is still a student-project prototype. Student sign-in and per-student acces
 
 ## Project status
 
-Prototype deployed on Railway. Student registration/login, personal profile editing, persistent saved internships, skill-based recommendations and gap insights, advanced opportunity discovery, internship details, and application tracking are implemented. Additional production hardening and employer/admin workflows remain future work.
+Prototype deployed on Railway. Student registration/login, personal profile editing, persistent saved internships, skill-based recommendations and gap insights, advanced opportunity discovery, internship details, application tracking, and a student discussion community are implemented. Dedicated admin moderation tools, pagination, notifications, and direct messaging remain future work.
