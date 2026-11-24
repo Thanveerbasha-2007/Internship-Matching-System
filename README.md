@@ -102,6 +102,10 @@ For production, set `VITE_API_BASE_URL` to the public backend URL before buildin
 
 See [documentation/api-reference.md](documentation/api-reference.md).
 
+## Deployment
+
+See [documentation/deployment-guide.md](documentation/deployment-guide.md) for the Vercel + Railway deployment configuration and verification steps.
+
 ## Database documentation
 
 See [documentation/database-design.md](documentation/database-design.md) and [documentation/sample-data-guide.md](documentation/sample-data-guide.md).
