@@ -25,7 +25,8 @@ The Spring Boot service reads these variables:
 DB_URL=jdbc:mysql://${{MySQL.MYSQLHOST}}:${{MySQL.MYSQLPORT}}/railway?allowPublicKeyRetrieval=true&useSSL=false&serverTimezone=UTC
 DB_USERNAME=${{MySQL.MYSQLUSER}}
 DB_PASSWORD=${{MySQL.MYSQLPASSWORD}}
-CORS_ALLOWED_ORIGINS=https://YOUR-RAILWAY-APP-DOMAIN
+CORS_ALLOWED_ORIGINS=https://internship-api-production-5a538a6f.up.railway.app
+SESSION_COOKIE_SECURE=true
 ```
 
 Use Railway's variable-reference syntax, not copied credentials. The current MySQL volume was initialized with the default `railway` database, so the deployed API connects to that database. Local setup can continue to use `internship_matching` as described in the README.
@@ -59,13 +60,13 @@ The application initializes its packaged schema and fictional demo data on start
 
 ## Security limitations
 
-This prototype does not yet include sign-in, authentication, or role-based authorization. Student profile endpoints are public and application requests do not verify a logged-in student. Use only the fictional sample records for a public demo.
+Student registration and login now use BCrypt password hashes and HttpOnly session cookies. The backend restricts profile, recommendation, and application endpoints to the signed-in student. The application is still a student-project prototype.
 
-Before real students use the service:
-- Add authentication and authorize students to access only their own profiles and applications.
-- Add employer/admin roles before enabling internship management.
-- Restrict public student data, and remove demo profiles from production.
-- Add database backups, migrations, rate limits, audit logging, and privacy/consent controls.
+Before real-world use:
+- Add email verification and a secure password-reset flow.
+- Add employer/admin roles and appropriate permissions before enabling employer workflows.
+- Add rate limiting, account lockout/abuse protection, database backups, managed schema migrations, audit logging, and privacy/consent controls.
+- Review the public internship and skills data separately from private student data.
 - Never commit passwords, tokens, or other secrets to GitHub.
 
 ## Hosting references
