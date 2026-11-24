@@ -115,6 +115,83 @@ CREATE TABLE IF NOT EXISTS saved_internships (
   DEFAULT CHARSET=utf8mb4
   COLLATE=utf8mb4_unicode_ci;
 
+CREATE TABLE IF NOT EXISTS community_posts (
+  post_id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  author_student_id BIGINT UNSIGNED NOT NULL,
+  category VARCHAR(40) NOT NULL,
+  title VARCHAR(180) NOT NULL,
+  body TEXT NOT NULL,
+  status ENUM('VISIBLE', 'DELETED') NOT NULL DEFAULT 'VISIBLE',
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+    ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (post_id),
+  KEY idx_community_posts_feed (status, created_at),
+  KEY idx_community_posts_author (author_student_id, created_at),
+  CONSTRAINT fk_community_posts_author
+    FOREIGN KEY (author_student_id) REFERENCES students (student_id)
+    ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB
+  DEFAULT CHARSET=utf8mb4
+  COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS community_comments (
+  comment_id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  post_id BIGINT UNSIGNED NOT NULL,
+  author_student_id BIGINT UNSIGNED NOT NULL,
+  body TEXT NOT NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+    ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (comment_id),
+  KEY idx_community_comments_post (post_id, created_at),
+  KEY idx_community_comments_author (author_student_id, created_at),
+  CONSTRAINT fk_community_comments_post
+    FOREIGN KEY (post_id) REFERENCES community_posts (post_id)
+    ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT fk_community_comments_author
+    FOREIGN KEY (author_student_id) REFERENCES students (student_id)
+    ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB
+  DEFAULT CHARSET=utf8mb4
+  COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS community_post_votes (
+  post_id BIGINT UNSIGNED NOT NULL,
+  student_id BIGINT UNSIGNED NOT NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (post_id, student_id),
+  KEY idx_community_post_votes_student (student_id),
+  CONSTRAINT fk_community_post_votes_post
+    FOREIGN KEY (post_id) REFERENCES community_posts (post_id)
+    ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT fk_community_post_votes_student
+    FOREIGN KEY (student_id) REFERENCES students (student_id)
+    ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB
+  DEFAULT CHARSET=utf8mb4
+  COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS community_reports (
+  report_id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  post_id BIGINT UNSIGNED NOT NULL,
+  reporter_student_id BIGINT UNSIGNED NOT NULL,
+  reason VARCHAR(30) NOT NULL,
+  details VARCHAR(500) NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (report_id),
+  UNIQUE KEY uk_community_report_student_post (post_id, reporter_student_id),
+  KEY idx_community_reports_created (created_at),
+  CONSTRAINT fk_community_reports_post
+    FOREIGN KEY (post_id) REFERENCES community_posts (post_id)
+    ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT fk_community_reports_reporter
+    FOREIGN KEY (reporter_student_id) REFERENCES students (student_id)
+    ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB
+  DEFAULT CHARSET=utf8mb4
+  COLLATE=utf8mb4_unicode_ci;
+
 CREATE TABLE IF NOT EXISTS applications (
   application_id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
   student_id BIGINT UNSIGNED NOT NULL,
