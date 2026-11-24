@@ -253,7 +253,6 @@ CREATE TABLE IF NOT EXISTS student_connections (
   UNIQUE KEY uk_student_connections_pair (requester_student_id, recipient_student_id),
   KEY idx_student_connections_recipient (recipient_student_id, status),
   KEY idx_student_connections_requester (requester_student_id, status),
-  CONSTRAINT chk_student_connections_not_self CHECK (requester_student_id <> recipient_student_id),
   CONSTRAINT fk_student_connections_requester FOREIGN KEY (requester_student_id) REFERENCES students (student_id)
     ON DELETE CASCADE ON UPDATE CASCADE,
   CONSTRAINT fk_student_connections_recipient FOREIGN KEY (recipient_student_id) REFERENCES students (student_id)
