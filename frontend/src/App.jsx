@@ -2,67 +2,36 @@ import { useEffect, useMemo, useState } from "react";
 
 const API_BASE = (import.meta.env.VITE_API_BASE_URL || "").replace(/\/$/, "");
 
-const DEMO_STUDENTS = [
-  { studentId: 1, fullName: "Aarav Sharma", email: "aarav.sharma@example.com", department: "Computer Science", graduationYear: 2027, skills: ["Java", "Spring Boot", "MySQL"] },
-  { studentId: 2, fullName: "Diya Reddy", email: "diya.reddy@example.com", department: "Computer Science", graduationYear: 2027, skills: ["React", "JavaScript", "HTML", "CSS"] },
-  { studentId: 3, fullName: "Kabir Mehta", email: "kabir.mehta@example.com", department: "Data Science", graduationYear: 2028, skills: ["Python", "SQL", "Machine Learning"] },
-  { studentId: 4, fullName: "Nisha Verma", email: "nisha.verma@example.com", department: "Computer Science", graduationYear: 2028, skills: ["Python", "SQL", "MySQL"] },
-];
-
-const DEMO_INTERNSHIPS = [
-  { internshipId: 1, title: "Backend Developer Intern", companyName: "Northstar Tech", description: "Work on Java-based backend services, REST APIs, and reliable database integration.", location: "Bengaluru", workMode: "HYBRID", durationWeeks: 12, stipendAmount: 15000, applicationDeadline: null, requiredSkills: ["Java", "Spring Boot", "MySQL"] },
-  { internshipId: 2, title: "Frontend Developer Intern", companyName: "PixelSpring Labs", description: "Build responsive user interfaces and turn product ideas into accessible web experiences.", location: "Remote", workMode: "REMOTE", durationWeeks: 10, stipendAmount: 12000, applicationDeadline: null, requiredSkills: ["React", "JavaScript", "HTML", "CSS"] },
-  { internshipId: 3, title: "Data Analyst Intern", companyName: "InsightWorks", description: "Explore datasets, write SQL queries, and help teams make decisions from data.", location: "Hyderabad", workMode: "ONSITE", durationWeeks: 8, stipendAmount: 10000, applicationDeadline: null, requiredSkills: ["Python", "SQL"] },
-  { internshipId: 4, title: "Machine Learning Intern", companyName: "ModelBridge", description: "Work with structured datasets and build introductory machine learning models.", location: "Pune", workMode: "HYBRID", durationWeeks: 12, stipendAmount: 18000, applicationDeadline: null, requiredSkills: ["Python", "SQL", "Machine Learning"] },
-];
-
-const DEMO_SKILLS = [
-  "Java", "Spring Boot", "MySQL", "React", "JavaScript",
-  "HTML", "CSS", "Python", "SQL", "Machine Learning",
-].map((skill, index) => ({ skillId: index + 1, skillName: skill }));
-
 async function api(path, options = {}) {
   const response = await fetch(`${API_BASE}${path}`, {
+    credentials: "same-origin",
     ...options,
     headers: {
       "Content-Type": "application/json",
       ...(options.headers || {}),
     },
   });
+  const payload = response.status === 204 ? null : await response.json().catch(() => null);
   if (!response.ok) {
-    const message = await response.text();
-    throw new Error(message || `Request failed (${response.status})`);
+    const error = new Error(payload?.message || payload?.detail || `Request failed (${response.status})`);
+    error.status = response.status;
+    throw error;
   }
-  if (response.status === 204) return null;
-  return response.json();
-}
-
-function makeDemoRecommendations(student, internships) {
-  if (!student) return [];
-  const known = new Set((student.skills || []).map((skill) => skill.toLowerCase()));
-  return internships.map((internship) => {
-    const required = internship.requiredSkills || [];
-    const matchedSkills = required.filter((skill) => known.has(skill.toLowerCase()));
-    const missingSkills = required.filter((skill) => !known.has(skill.toLowerCase()));
-    const matchScore = required.length
-      ? Math.round((matchedSkills.length / required.length) * 1000) / 10
-      : 0;
-    return { ...internship, matchedSkills, missingSkills, matchScore };
-  }).sort((a, b) => b.matchScore - a.matchScore);
+  return payload;
 }
 
 function formatStipend(amount) {
   if (amount === null || amount === undefined) return "Not specified";
   return new Intl.NumberFormat("en-IN", {
     style: "currency", currency: "INR", maximumFractionDigits: 0,
-  }).format(amount) + " / month";
+  }).format(Number(amount)) + " / month";
 }
 
 function formatDeadline(value) {
-  if (!value) return "Applications open";
+  if (!value) return "No deadline specified";
   const date = new Date(`${value}T00:00:00`);
   if (Number.isNaN(date.getTime())) return "See listing";
-  return `Apply by ${date.toLocaleDateString("en-IN", { day: "numeric", month: "short" })}`;
+  return date.toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" });
 }
 
 function initials(name = "") {
@@ -74,7 +43,7 @@ function Icon({ name, size = 18 }) {
     compass: <><circle cx="12" cy="12" r="9"/><path d="m16.2 7.8-2.5 5.9-5.9 2.5 2.5-5.9 5.9-2.5Z"/></>,
     briefcase: <><rect x="3" y="7" width="18" height="14" rx="2"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M3 12h18M10 12v2h4v-2"/></>,
     user: <><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></>,
-    bookmark: <><path d="M6 4h12v17l-6-4-6 4z"/></>,
+    bookmark: <path d="M6 4h12v17l-6-4-6 4z"/>,
     search: <><circle cx="10.8" cy="10.8" r="6.8"/><path d="m16 16 5 5"/></>,
     arrow: <><path d="M5 12h14M13 6l6 6-6 6"/></>,
     check: <path d="m5 12 4 4L19 6"/>,
@@ -82,11 +51,92 @@ function Icon({ name, size = 18 }) {
     clock: <><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></>,
     code: <><path d="m8 8-4 4 4 4M16 8l4 4-4 4M14 5l-4 14"/></>,
     spark: <><path d="m12 3 1.6 6.4L20 11l-6.4 1.6L12 19l-1.6-6.4L4 11l6.4-1.6L12 3Z"/><path d="m19 16 .7 2.3L22 19l-2.3.7L19 22l-.7-2.3L16 19l2.3-.7L19 16Z"/></>,
+    lock: <><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 1 1 8 0v3M12 14v3"/></>,
+    logOut: <><path d="M10 17l5-5-5-5M15 12H3"/><path d="M12 3h6a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-6"/></>,
+    close: <path d="m6 6 12 12M18 6 6 18"/>,
+    eye: <><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></>,
   };
   return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{paths[name] || paths.spark}</svg>;
 }
 
-function InternshipCard({ internship, onApply, applied, applying, apiOnline }) {
+function AuthPanel({ skills, mode, setMode, onSubmit, busy, error }) {
+  const [fullName, setFullName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [department, setDepartment] = useState("");
+  const [graduationYear, setGraduationYear] = useState("2027");
+  const [skillIds, setSkillIds] = useState([]);
+  const [showPassword, setShowPassword] = useState(false);
+
+  function toggleSkill(id) {
+    setSkillIds((current) => current.includes(id) ? current.filter((item) => item !== id) : [...current, id]);
+  }
+
+  function submit(event) {
+    event.preventDefault();
+    onSubmit(mode, {
+      fullName: fullName.trim(),
+      email: email.trim(),
+      password,
+      department: department.trim(),
+      graduationYear: graduationYear ? Number(graduationYear) : null,
+      skillIds,
+    });
+  }
+
+  return (
+    <div className="auth-layout">
+      <section className="auth-story">
+        <div className="eyebrow"><span className="eyebrow-dot"/> YOUR SKILLS. YOUR NEXT STEP.</div>
+        <h1>Make your next move<br/><em>count.</em></h1>
+        <p>Create your student profile, discover internships matched to your skills, and track every application from one place.</p>
+        <div className="auth-benefits">
+          <div><span className="auth-benefit-icon"><Icon name="spark" size={17}/></span><span><b>Skill-based recommendations</b><small>See why an internship matches your profile.</small></span></div>
+          <div><span className="auth-benefit-icon"><Icon name="briefcase" size={17}/></span><span><b>Internship details in one place</b><small>Compare work mode, stipend, duration and skills.</small></span></div>
+          <div><span className="auth-benefit-icon"><Icon name="bookmark" size={17}/></span><span><b>Application tracking</b><small>Keep your submitted applications together.</small></span></div>
+        </div>
+        <div className="auth-story-foot">INTERNMATCH · STUDENT OPPORTUNITY PLATFORM</div>
+      </section>
+
+      <section className="auth-card">
+        <div className="auth-card-heading">
+          <span className="brand-symbol"><Icon name="spark" size={19}/></span>
+          <div><div className="section-kicker">STUDENT ACCOUNT</div><h2>{mode === "login" ? "Welcome back" : "Create your account"}</h2><p>{mode === "login" ? "Sign in to open your personal opportunity space." : "Add your academic details and skills to get started."}</p></div>
+        </div>
+        <div className="auth-switch" role="tablist" aria-label="Account access">
+          <button type="button" className={mode === "login" ? "selected" : ""} onClick={() => setMode("login")}>Sign in</button>
+          <button type="button" className={mode === "register" ? "selected" : ""} onClick={() => setMode("register")}>Create account</button>
+        </div>
+        <form className="auth-form" onSubmit={submit}>
+          {mode === "register" && <>
+            <label>Full name<input required maxLength="120" autoComplete="name" value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder="Your full name"/></label>
+            <div className="auth-fields-two">
+              <label>Department<input maxLength="120" value={department} onChange={(e) => setDepartment(e.target.value)} placeholder="e.g. Computer Science"/></label>
+              <label>Graduation year<input type="number" min="2020" max="2100" value={graduationYear} onChange={(e) => setGraduationYear(e.target.value)} placeholder="2027"/></label>
+            </div>
+          </>}
+          <label>Email address<input required type="email" autoComplete="email" maxLength="255" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com"/></label>
+          <label>Password
+            <span className="password-wrap"><input required type={showPassword ? "text" : "password"} autoComplete={mode === "login" ? "current-password" : "new-password"} minLength="8" maxLength="72" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="At least 8 characters"/><button type="button" aria-label={showPassword ? "Hide password" : "Show password"} onClick={() => setShowPassword((value) => !value)}><Icon name="eye" size={16}/></button></span>
+            {mode === "register" && <small className="field-hint">Use at least 8 characters. Your password is stored as a secure hash.</small>}
+          </label>
+          {mode === "register" && <div className="auth-skills">
+            <div className="skill-heading"><span>Your skills</span><span>{skillIds.length} selected</span></div>
+            <p>Select the skills you currently know. You can compare them with internship requirements after registration.</p>
+            <div className="auth-skill-options">
+              {skills.map((skill) => <button type="button" key={skill.skillId} className={skillIds.includes(skill.skillId) ? "auth-skill selected" : "auth-skill"} onClick={() => toggleSkill(skill.skillId)}>{skillIds.includes(skill.skillId) && <Icon name="check" size={12}/>} {skill.skillName}</button>)}
+            </div>
+          </div>}
+          {error && <div className="auth-error" role="alert">{error}</div>}
+          <button className="button button-dark auth-submit" type="submit" disabled={busy}>{busy ? "Please wait…" : mode === "login" ? "Sign in to InternMatch" : "Create student account"} <Icon name="arrow" size={16}/></button>
+        </form>
+        <div className="auth-secure"><Icon name="lock" size={14}/> Your student account is protected by a private session.</div>
+      </section>
+    </div>
+  );
+}
+
+function InternshipCard({ internship, onApply, onDetails, applied, applying }) {
   const score = Number(internship.matchScore ?? 0);
   const matched = internship.matchedSkills || [];
   const required = internship.requiredSkills || [];
@@ -117,60 +167,93 @@ function InternshipCard({ internship, onApply, applied, applying, apiOnline }) {
       </div>
       <div className="card-bottom">
         <div><strong>{formatStipend(internship.stipendAmount)}</strong><small>{formatDeadline(internship.applicationDeadline)}</small></div>
-        <button className={applied ? "button button-applied" : "button button-dark"} onClick={() => onApply(internship)} disabled={applied || applying || !apiOnline}>
-          {applied ? "Applied" : applying ? "Applying…" : "Apply now"} {!applied && <Icon name="arrow" size={15}/>}
-        </button>
+        <div className="card-actions">
+          <button className="button button-outline" onClick={() => onDetails(internship)}>Details</button>
+          <button className={applied ? "button button-applied" : "button button-dark"} onClick={() => onApply(internship)} disabled={applied || applying}>
+            {applied ? "Applied" : applying ? "Applying…" : "Apply"} {!applied && <Icon name="arrow" size={15}/>}
+          </button>
+        </div>
       </div>
     </article>
   );
 }
 
+function InternshipDetails({ internship, onClose, onApply, applied, applying }) {
+  if (!internship) return null;
+  const required = internship.requiredSkills || [];
+  const matched = internship.matchedSkills || [];
+  const missing = internship.missingSkills || [];
+  return (
+    <div className="modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
+      <section className="details-modal" role="dialog" aria-modal="true" aria-labelledby="internship-modal-title">
+        <button className="modal-close" onClick={onClose} aria-label="Close details"><Icon name="close"/></button>
+        <div className="details-company"><span className="company-mark">{initials(internship.companyName)}</span><div><div className="company-name">{internship.companyName}</div><span className="details-open">{internship.status || "OPEN"} opportunity</span></div><div className="match-pill"><Icon name="spark" size={13}/>{Number(internship.matchScore || 0)}% match</div></div>
+        <h2 id="internship-modal-title">{internship.title}</h2>
+        <p className="details-description">{internship.description || "The company has not provided a longer role description."}</p>
+        <div className="details-facts">
+          <div><small>LOCATION</small><b>{internship.location || "Not specified"}</b></div>
+          <div><small>WORK MODE</small><b>{(internship.workMode || "Not specified").replaceAll("_", " ")}</b></div>
+          <div><small>DURATION</small><b>{internship.durationWeeks ? `${internship.durationWeeks} weeks` : "Not specified"}</b></div>
+          <div><small>STIPEND</small><b>{formatStipend(internship.stipendAmount)}</b></div>
+          <div><small>APPLICATION DEADLINE</small><b>{formatDeadline(internship.applicationDeadline)}</b></div>
+          <div><small>SKILL MATCH</small><b>{matched.length} of {required.length} required skills</b></div>
+        </div>
+        <div className="details-skills">
+          <h3>Required skills</h3>
+          <div className="skill-list">{required.length ? required.map((skill) => <span className={matched.some((item) => item.toLowerCase() === skill.toLowerCase()) ? "skill-chip matched" : "skill-chip"} key={skill}>{matched.some((item) => item.toLowerCase() === skill.toLowerCase()) && <Icon name="check" size={11}/>} {skill}</span>) : <span className="details-muted">No required skills listed.</span>}</div>
+          <div className="skills-explainer"><span><i className="legend-dot matched-dot"/> You have: {matched.length ? matched.join(", ") : "No matching skills yet"}</span><span><i className="legend-dot missing-dot"/> To develop: {missing.length ? missing.join(", ") : "None"}</span></div>
+        </div>
+        <div className="details-footer"><span>Match score is calculated from required skill overlap.</span><button className="button button-dark" disabled={applied || applying} onClick={() => onApply(internship)}>{applied ? "Already applied" : applying ? "Applying…" : "Apply for this internship"} <Icon name="arrow" size={15}/></button></div>
+      </section>
+    </div>
+  );
+}
+
 export default function App() {
-  const [students, setStudents] = useState(DEMO_STUDENTS);
-  const [internships, setInternships] = useState(DEMO_INTERNSHIPS);
-  const [skills, setSkills] = useState(DEMO_SKILLS);
+  const [currentStudent, setCurrentStudent] = useState(null);
+  const [internships, setInternships] = useState([]);
+  const [skills, setSkills] = useState([]);
   const [recommendations, setRecommendations] = useState([]);
-  const [selectedStudentId, setSelectedStudentId] = useState("1");
   const [tab, setTab] = useState("discover");
+  const [authMode, setAuthMode] = useState("login");
+  const [authBusy, setAuthBusy] = useState(false);
+  const [authError, setAuthError] = useState("");
+  const [authLoading, setAuthLoading] = useState(true);
+  const [apiOnline, setApiOnline] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [workMode, setWorkMode] = useState("all");
   const [minimumMatch, setMinimumMatch] = useState("0");
-  const [apiOnline, setApiOnline] = useState(false);
-  const [loading, setLoading] = useState(true);
   const [applyingId, setApplyingId] = useState(null);
   const [applications, setApplications] = useState([]);
   const [notice, setNotice] = useState("");
-
-  const selectedStudent = students.find((student) => String(student.studentId) === selectedStudentId) || students[0];
+  const [selectedInternship, setSelectedInternship] = useState(null);
 
   useEffect(() => {
     let active = true;
     async function load() {
       setLoading(true);
+      setAuthLoading(true);
       try {
-        const [studentData, internshipData, skillData] = await Promise.all([
-          api("/api/students"),
+        const [internshipData, skillData, sessionStudent] = await Promise.all([
           api("/api/internships"),
           api("/api/skills"),
+          api("/api/auth/me").catch(() => null),
         ]);
         if (!active) return;
-        setStudents(studentData);
         setInternships(internshipData);
         setSkills(skillData);
+        setCurrentStudent(sessionStudent);
         setApiOnline(true);
-        setNotice("");
-        if (!studentData.some((student) => String(student.studentId) === selectedStudentId) && studentData.length) {
-          setSelectedStudentId(String(studentData[0].studentId));
-        }
-      } catch {
+      } catch (error) {
         if (!active) return;
         setApiOnline(false);
-        setStudents(DEMO_STUDENTS);
-        setInternships(DEMO_INTERNSHIPS);
-        setSkills(DEMO_SKILLS);
-        setNotice("Preview mode — showing fictional sample data. Connect the API to submit applications.");
+        setNotice(`The application server could not be reached: ${error.message}`);
       } finally {
-        if (active) setLoading(false);
+        if (active) {
+          setLoading(false);
+          setAuthLoading(false);
+        }
       }
     }
     load();
@@ -180,62 +263,90 @@ export default function App() {
   useEffect(() => {
     let active = true;
     async function loadRecommendations() {
-      if (!apiOnline || !selectedStudent) {
-        setRecommendations(makeDemoRecommendations(selectedStudent, internships));
+      if (!currentStudent || !apiOnline) {
+        setRecommendations([]);
         return;
       }
       try {
-        const data = await api(`/api/students/${selectedStudent.studentId}/recommendations`);
+        const data = await api(`/api/students/${currentStudent.studentId}/recommendations`);
         if (active) setRecommendations(data);
-      } catch {
-        if (active) setRecommendations(makeDemoRecommendations(selectedStudent, internships));
+      } catch (error) {
+        if (active) setNotice(error.message);
       }
     }
     loadRecommendations();
     return () => { active = false; };
-  }, [apiOnline, selectedStudent, internships]);
+  }, [apiOnline, currentStudent]);
 
   useEffect(() => {
     let active = true;
     async function loadApplications() {
-      if (tab !== "applications" || !apiOnline || !selectedStudent) {
-        if (tab === "applications" && !apiOnline) setApplications([]);
-        return;
-      }
+      if (tab !== "applications" || !currentStudent || !apiOnline) return;
       try {
-        const data = await api(`/api/students/${selectedStudent.studentId}/applications`);
+        const data = await api(`/api/students/${currentStudent.studentId}/applications`);
         if (active) setApplications(data);
-      } catch {
-        if (active) setApplications([]);
+      } catch (error) {
+        if (active) setNotice(error.message);
       }
     }
     loadApplications();
     return () => { active = false; };
-  }, [tab, apiOnline, selectedStudent]);
+  }, [tab, apiOnline, currentStudent]);
 
-  const visibleInternships = useMemo(() => recommendations.filter((internship) => {
-    const text = `${internship.title} ${internship.companyName} ${internship.location} ${(internship.requiredSkills || []).join(" ")}`.toLowerCase();
-    const modeMatches = workMode === "all" || (internship.workMode || "").toLowerCase() === workMode;
-    return text.includes(search.toLowerCase()) && modeMatches && Number(internship.matchScore || 0) >= Number(minimumMatch);
-  }), [recommendations, search, workMode, minimumMatch]);
+  async function handleAuth(mode, formData) {
+    setAuthBusy(true);
+    setAuthError("");
+    try {
+      const endpoint = mode === "register" ? "/api/auth/register" : "/api/auth/login";
+      const student = await api(endpoint, { method: "POST", body: JSON.stringify(formData) });
+      setCurrentStudent(student);
+      setApplications([]);
+      setTab("discover");
+      setNotice(mode === "register" ? "Your student account has been created." : `Welcome back, ${student.fullName.split(" ")[0]}.`);
+    } catch (error) {
+      setAuthError(error.message);
+    } finally {
+      setAuthBusy(false);
+    }
+  }
+
+  async function handleLogout() {
+    try { await api("/api/auth/logout", { method: "POST" }); } catch { /* Clear local state even if the session expired. */ }
+    setCurrentStudent(null);
+    setRecommendations([]);
+    setApplications([]);
+    setTab("discover");
+    setNotice("You have signed out.");
+  }
+
+  const visibleInternships = useMemo(() => {
+    const source = currentStudent ? recommendations : internships;
+    return source.filter((internship) => {
+      const text = `${internship.title} ${internship.companyName} ${internship.location} ${(internship.requiredSkills || []).join(" ")}`.toLowerCase();
+      const modeMatches = workMode === "all" || (internship.workMode || "").toLowerCase() === workMode;
+      return text.includes(search.toLowerCase()) && modeMatches
+        && (!currentStudent || Number(internship.matchScore || 0) >= Number(minimumMatch));
+    });
+  }, [currentStudent, recommendations, internships, search, workMode, minimumMatch]);
 
   async function handleApply(internship) {
-    if (!apiOnline || !selectedStudent) return;
+    if (!apiOnline || !currentStudent) return;
     setApplyingId(internship.internshipId);
     setNotice("");
     try {
       await api("/api/applications", {
         method: "POST",
-        body: JSON.stringify({ studentId: selectedStudent.studentId, internshipId: internship.internshipId }),
+        body: JSON.stringify({ studentId: currentStudent.studentId, internshipId: internship.internshipId }),
       });
       setNotice(`Your application for ${internship.title} has been recorded.`);
-      const data = await api(`/api/students/${selectedStudent.studentId}/applications`);
+      const data = await api(`/api/students/${currentStudent.studentId}/applications`);
       setApplications(data);
+      setSelectedInternship(null);
       setTab("applications");
     } catch (error) {
-      setNotice(error.message.includes("409")
+      setNotice(error.status === 409
         ? "You have already applied to this internship."
-        : "The application could not be submitted. Please check the API and try again.");
+        : error.message);
     } finally {
       setApplyingId(null);
     }
@@ -246,6 +357,24 @@ export default function App() {
   const averageMatch = recommendations.length
     ? Math.round(recommendations.reduce((sum, item) => sum + Number(item.matchScore || 0), 0) / recommendations.length)
     : 0;
+
+  if (authLoading || loading) {
+    return <div className="auth-loading"><span className="brand-symbol"><Icon name="spark" size={20}/></span><div className="loader"/><p>Preparing your opportunity space…</p></div>;
+  }
+
+  if (!apiOnline) {
+    return <div className="auth-loading"><span className="brand-symbol"><Icon name="spark" size={20}/></span><h2>InternMatch is temporarily unavailable</h2><p>{notice || "Please refresh the page in a moment."}</p><button className="button button-dark" onClick={() => window.location.reload()}>Try again</button></div>;
+  }
+
+  if (!currentStudent) {
+    return (
+      <div className="app-shell auth-shell">
+        <header className="site-header auth-header"><a className="brand" href="#top"><span className="brand-symbol"><Icon name="spark" size={19}/></span><span>intern<span>match</span></span></a><span className="mode-indicator"><span className="status-light live"/>Secure student access</span></header>
+        <AuthPanel skills={skills} mode={authMode} setMode={(mode) => { setAuthMode(mode); setAuthError(""); }} onSubmit={handleAuth} busy={authBusy} error={authError}/>
+        <footer className="site-footer"><a className="brand footer-brand" href="#top"><span className="brand-symbol"><Icon name="spark" size={17}/></span><span>intern<span>match</span></span></a><span>Helping skills find the right opportunity.</span><span>Internship Matching System · Student project</span></footer>
+      </div>
+    );
+  }
 
   return (
     <div className="app-shell">
@@ -259,11 +388,10 @@ export default function App() {
           <button className={tab === "profile" ? "nav-link active" : "nav-link"} onClick={() => setTab("profile")}><Icon name="user" size={16}/> My profile</button>
           <button className={tab === "applications" ? "nav-link active" : "nav-link"} onClick={() => setTab("applications")}><Icon name="bookmark" size={16}/> Applications</button>
         </nav>
-        <div className="header-user">
-          <select aria-label="Select demo student" value={selectedStudentId} onChange={(event) => setSelectedStudentId(event.target.value)}>
-            {students.map((student) => <option key={student.studentId} value={student.studentId}>{student.fullName}</option>)}
-          </select>
-          <div className="avatar">{initials(selectedStudent?.fullName)}</div>
+        <div className="header-user account-header">
+          <div className="avatar">{initials(currentStudent.fullName)}</div>
+          <span className="header-account-name">{currentStudent.fullName}</span>
+          <button className="signout-button" onClick={handleLogout}><Icon name="logOut" size={15}/> Sign out</button>
         </div>
       </header>
 
@@ -287,22 +415,22 @@ export default function App() {
           <div className="hero-bottom"><span>MADE FOR STUDENTS BUILDING WHAT'S NEXT</span><span>DISCOVER · MATCH · APPLY</span></div>
         </section>
 
-        {notice && <div className={apiOnline ? "notice notice-info" : "notice notice-warning"}>{notice}</div>}
+        {notice && <div className="notice notice-info">{notice}</div>}
 
         <section className="welcome-row">
           <div>
             <div className="section-kicker">YOUR OPPORTUNITY SPACE</div>
-            <h2>{tab === "discover" ? `A good next step, ${(selectedStudent?.fullName || "there").split(" ")[0]}.` : tab === "profile" ? "Your skill profile" : "Your applications"}</h2>
-            <p>{tab === "discover" ? "A shortlist shaped around the skills you already have." : tab === "profile" ? "The skills in your profile help us find relevant roles." : "Keep track of the opportunities you've applied to."}</p>
+            <h2>{tab === "discover" ? `A good next step, ${currentStudent.fullName.split(" ")[0]}.` : tab === "profile" ? "Your student profile" : "Your applications"}</h2>
+            <p>{tab === "discover" ? "A shortlist shaped around the skills you already have." : tab === "profile" ? "Your academic details and skills shape your recommendations." : "Keep track of the opportunities you've applied to."}</p>
           </div>
-          <div className="mode-indicator"><span className={apiOnline ? "status-light live" : "status-light"}/>{apiOnline ? "Connected to live API" : "Demo preview"}</div>
+          <div className="mode-indicator"><span className="status-light live"/>Signed in · Live account</div>
         </section>
 
         {tab === "discover" && <>
           <section className="stats-grid">
             <div className="stat-card"><span className="stat-icon violet"><Icon name="briefcase"/></span><span className="stat-value">{internships.length}</span><span className="stat-label">Open opportunities</span></div>
             <div className="stat-card"><span className="stat-icon peach"><Icon name="spark"/></span><span className="stat-value">{perfectMatches}</span><span className="stat-label">Perfect skill matches</span></div>
-            <div className="stat-card"><span className="stat-icon mint"><Icon name="code"/></span><span className="stat-value">{selectedStudent?.skills?.length || 0}</span><span className="stat-label">Skills in your profile</span></div>
+            <div className="stat-card"><span className="stat-icon mint"><Icon name="code"/></span><span className="stat-value">{currentStudent.skills?.length || 0}</span><span className="stat-label">Skills in your profile</span></div>
             <div className="stat-card"><span className="stat-icon blue"><Icon name="compass"/></span><span className="stat-value">{averageMatch}%</span><span className="stat-label">Average match score</span></div>
           </section>
 
@@ -320,11 +448,11 @@ export default function App() {
                 <option value="0">Any match</option><option value="50">50%+ match</option><option value="75">75%+ match</option><option value="100">100% match</option>
               </select>
             </div>
-            {loading ? <div className="empty-state"><div className="loader"/><p>Finding opportunities for you…</p></div> : visibleInternships.length ? (
+            {visibleInternships.length ? (
               <div className="internship-grid">
                 {visibleInternships.map((internship) => (
-                  <InternshipCard key={internship.internshipId} internship={internship} onApply={handleApply}
-                    applied={appliedIds.has(internship.internshipId)} applying={applyingId === internship.internshipId} apiOnline={apiOnline}/>
+                  <InternshipCard key={internship.internshipId} internship={internship} onApply={handleApply} onDetails={setSelectedInternship}
+                    applied={appliedIds.has(internship.internshipId)} applying={applyingId === internship.internshipId}/>
                 ))}
               </div>
             ) : <div className="empty-state"><span className="empty-icon"><Icon name="search" size={25}/></span><h3>No opportunities found</h3><p>Try a different keyword or adjust your filters.</p><button className="text-button" onClick={() => { setSearch(""); setWorkMode("all"); setMinimumMatch("0"); }}>Clear filters</button></div>}
@@ -335,25 +463,25 @@ export default function App() {
           <div className="profile-card">
             <div className="profile-banner"/>
             <div className="profile-content">
-              <div className="profile-avatar">{initials(selectedStudent?.fullName)}</div>
-              <h3>{selectedStudent?.fullName}</h3><p>{selectedStudent?.department || "Student"} · Class of {selectedStudent?.graduationYear || "—"}</p>
+              <div className="profile-avatar">{initials(currentStudent.fullName)}</div>
+              <h3>{currentStudent.fullName}</h3><p>{currentStudent.department || "Department not added"} · Class of {currentStudent.graduationYear || "Not specified"}</p>
               <div className="profile-divider"/>
-              <span className="profile-label">CONTACT</span><div className="profile-email">{selectedStudent?.email}</div>
-              <span className="profile-label profile-label-spaced">SKILLS ({selectedStudent?.skills?.length || 0})</span>
-              <div className="skill-list profile-skills">{(selectedStudent?.skills || []).map((skill) => <span className="skill-chip matched" key={skill}>{skill}</span>)}</div>
-              <p className="profile-footnote">This project preview uses fictional sample profiles. Profile editing and account sign-in are not enabled yet.</p>
+              <span className="profile-label">EMAIL ADDRESS</span><div className="profile-email">{currentStudent.email}</div>
+              <span className="profile-label profile-label-spaced">STUDENT ID</span><div className="profile-email">#{currentStudent.studentId}</div>
+              <span className="profile-label profile-label-spaced">SKILLS ({currentStudent.skills?.length || 0})</span>
+              <div className="skill-list profile-skills">{(currentStudent.skills || []).map((skill) => <span className="skill-chip matched" key={skill}>{skill}</span>)}</div>
+              <p className="profile-footnote">Your account profile is stored in the application database. Keep your skills up to date to improve the relevance of your matches.</p>
             </div>
           </div>
           <div className="profile-side">
             <div className="side-panel"><div className="section-kicker">YOUR MATCH SNAPSHOT</div><h3>Where your skills can take you</h3><div className="snapshot-number">{perfectMatches}<small> perfect matches</small></div><div className="progress-track"><span style={{ width: `${Math.min(100, averageMatch)}%` }}/></div><div className="progress-foot"><span>Average skill overlap</span><b>{averageMatch}%</b></div></div>
-            <div className="side-panel"><div className="section-kicker">A LITTLE TIP</div><h3>Make your profile stronger</h3><p>Add projects and practical experience as the platform grows. A clearer skill profile helps you understand which requirements you already meet and what to learn next.</p><button className="button button-dark" onClick={() => setTab("discover")}>See recommendations <Icon name="arrow" size={15}/></button></div>
+            <div className="side-panel"><div className="section-kicker">A LITTLE TIP</div><h3>Make your profile stronger</h3><p>Your recommendations show which requirements you already meet and which skills you could develop next. Add more skills when you have learned them.</p><button className="button button-dark" onClick={() => setTab("discover")}>See recommendations <Icon name="arrow" size={15}/></button></div>
           </div>
         </section>}
 
         {tab === "applications" && <section className="applications-section">
-          {!apiOnline ? <div className="empty-state"><span className="empty-icon"><Icon name="bookmark" size={25}/></span><h3>Applications need a connected API</h3><p>You're viewing sample data. Connect the backend to submit and save applications.</p></div> :
-            applications.length ? <div className="applications-list">{applications.map((application) => <div className="application-row" key={application.applicationId}><div className="company-mark">{initials(application.companyName)}</div><div className="application-info"><b>{application.internshipTitle}</b><span>{application.companyName} · {new Date(application.appliedAt).toLocaleDateString("en-IN")}</span></div><span className="application-status">{application.status.replaceAll("_", " ").toLowerCase()}</span></div>)}</div> :
-            <div className="empty-state"><span className="empty-icon"><Icon name="bookmark" size={25}/></span><h3>No applications yet</h3><p>Explore the internships that fit your skills and apply when the backend is connected.</p><button className="button button-dark" onClick={() => setTab("discover")}>Explore internships <Icon name="arrow" size={15}/></button></div>}
+          {applications.length ? <div className="applications-list">{applications.map((application) => <div className="application-row" key={application.applicationId}><div className="company-mark">{initials(application.companyName)}</div><div className="application-info"><b>{application.internshipTitle}</b><span>{application.companyName} · {new Date(application.appliedAt).toLocaleDateString("en-IN")}</span></div><span className="application-status">{application.status.replaceAll("_", " ").toLowerCase()}</span></div>)}</div> :
+            <div className="empty-state"><span className="empty-icon"><Icon name="bookmark" size={25}/></span><h3>No applications yet</h3><p>Explore the internships that fit your skills and apply when you're ready.</p><button className="button button-dark" onClick={() => setTab("discover")}>Explore internships <Icon name="arrow" size={15}/></button></div>}
         </section>}
 
         <section className="how-section">
@@ -369,6 +497,9 @@ export default function App() {
       </main>
 
       <footer className="site-footer"><a className="brand footer-brand" href="#top"><span className="brand-symbol"><Icon name="spark" size={17}/></span><span>intern<span>match</span></span></a><span>Helping skills find the right opportunity.</span><span>Internship Matching System · Student project</span></footer>
+      <InternshipDetails internship={selectedInternship} onClose={() => setSelectedInternship(null)} onApply={handleApply}
+        applied={selectedInternship ? appliedIds.has(selectedInternship.internshipId) : false}
+        applying={selectedInternship ? applyingId === selectedInternship.internshipId : false}/>
     </div>
   );
 }
