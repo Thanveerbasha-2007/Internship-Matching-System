@@ -102,9 +102,14 @@ For the single-origin production deployment, leave `VITE_API_BASE_URL` empty: th
 
 See [documentation/api-reference.md](documentation/api-reference.md).
 
-## Deployment
+## Live deployment
 
-See [documentation/deployment-guide.md](documentation/deployment-guide.md) for the Railway deployment configuration and verification steps.
+The current public demo is hosted on Railway:
+
+- Website: https://internship-api-production-5a538a6f.up.railway.app
+- API health: https://internship-api-production-5a538a6f.up.railway.app/api/health
+
+See [documentation/deployment-guide.md](documentation/deployment-guide.md) for the deployment configuration and verification steps.
 
 ## Database documentation
 
