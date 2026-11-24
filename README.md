@@ -1,42 +1,132 @@
 # Internship Matching System
 
-A skill-based system to help students discover internship opportunities that are relevant to their skills and interests.
+A skill-based web application that helps students discover internship opportunities aligned with their skills and understand why each opportunity is recommended.
 
 ## Project objective
 
-The system is intended to maintain student skill profiles, store internship requirements, and produce explainable recommendations by comparing the skills required by an opportunity with the skills listed in a student's profile.
+The application maintains student skill profiles, stores internship requirements, and ranks open opportunities using an explainable skill-overlap score.
 
-## Planned modules
+## Confirmed technology stack
 
-- Student profile and skill management
-- Internship opportunity management
-- Skill-based matching and ranking
-- Recommended internships view
+- Frontend: React 19 + Vite
+- Backend: Java 21 + Spring Boot 4.2
+- Database: MySQL 8
+- Communication: REST APIs
 
 ## Repository structure
 
 ```text
 .
-├── frontend/          # Frontend application
-├── backend/           # Backend application and REST API
-├── database/          # Database schema and seed data
-├── documentation/     # SRS and project documentation
-├── presentation/      # Project presentation
-└── README.md
+├── .github/workflows/    # Database, backend and frontend CI checks
+├── frontend/             # React + Vite user interface
+├── backend/              # Spring Boot REST API
+├── database/             # MySQL schema and demo data
+├── documentation/        # Database design and API reference
+└── presentation/         # Project presentation
 ```
 
-## Confirmed technology stack
+## Features in the current prototype
 
-- Frontend: React.js
-- Backend: Java with Spring Boot
-- Database: MySQL
-- Frontend-backend communication: REST APIs
+- Browse internship opportunities
+- Search by role, company, location, and skill
+- Filter by work mode and minimum skill-match percentage
+- View student profiles and skill sets
+- Compare matched and missing internship skills
+- View ranked recommendations
+- Submit an internship application and view its status when the API is connected
+- Demo preview mode with clearly marked fictional sample data when the API is unavailable
 
-The stack is finalized for the project. Detailed versions, dependencies, and setup instructions will be documented when the applications are initialized.
+## Matching baseline
 
-## Getting started
+The current recommendation score is:
 
-Setup instructions will be added as the frontend, backend, and database are implemented.
+```text
+(match count of required skills / total distinct required skills) * 100
+```
+
+Skill names are compared without case sensitivity. The API returns the required, matched, and missing skills so the score is explainable. This is a transparent rule-based baseline, not an AI or machine-learning model.
+
+## Run locally
+
+### 1. Database
+
+Use MySQL 8.0 or newer.
+
+Create the database and tables:
+
+```bash
+mysql -u YOUR_USERNAME -p < database/schema.sql
+```
+
+Insert fictional demo data:
+
+```bash
+mysql -u YOUR_USERNAME -p < database/seed/sample-data.sql
+```
+
+### 2. Backend
+
+Requirements: Java 21 and Maven 3.9+.
+
+Set the database variables in your terminal (replace the example password):
+
+**Windows PowerShell**
+
+```powershell
+$env:DB_URL="jdbc:mysql://localhost:3306/internship_matching?allowPublicKeyRetrieval=true&useSSL=false&serverTimezone=UTC"
+$env:DB_USERNAME="root"
+$env:DB_PASSWORD="your-mysql-password"
+$env:CORS_ALLOWED_ORIGINS="http://localhost:5173"
+mvn -f backend/pom.xml spring-boot:run
+```
+
+The backend also initializes its packaged schema and sample data on startup. Its default local MySQL username/password fallback is for development only; configure proper credentials outside local development.
+
+Health endpoint: `http://localhost:8080/api/health`
+
+### 3. Frontend
+
+Requirements: Node.js 22 or newer.
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+Open `http://localhost:5173`. Vite proxies `/api` requests to `http://localhost:8080` during local development.
+
+For production, set `VITE_API_BASE_URL` to the public backend URL before building the frontend.
+
+## API documentation
+
+See [documentation/api-reference.md](documentation/api-reference.md).
+
+## Database documentation
+
+See [documentation/database-design.md](documentation/database-design.md) and [documentation/sample-data-guide.md](documentation/sample-data-guide.md).
+
+## Automated tests
+
+GitHub Actions checks:
+- MySQL schema and sample data integration
+- Backend compilation, matching unit tests, Spring Boot startup, and API smoke tests
+- Frontend production build
+
+View runs in the repository's **Actions** tab.
+
+## Deployment architecture
+
+The intended deployment architecture is:
+- React frontend: Vercel
+- Spring Boot API: Railway
+- MySQL database: Railway MySQL service
+
+Production deployment still requires connecting the hosting projects, setting environment variables, configuring the database and CORS origin, and testing the public URLs.
+
+## Security and data note
+
+The current app is a prototype and does not yet have sign-in, authentication, or role-based authorization. The API currently exposes sample student profiles and accepts application requests without a user login. Use only fictional demo data until authentication, authorization, validation, and production data protections have been added. Never commit database passwords, API tokens, or other secrets.
 
 ## Team
 
@@ -47,4 +137,4 @@ Setup instructions will be added as the frontend, backend, and database are impl
 
 ## Project status
 
-Initial repository setup. Features, architecture, and setup instructions will be updated as development progresses.
+Prototype implementation in progress. The database, backend REST API, and initial React interface are in the repository. Hosting and production security hardening are still outstanding.
