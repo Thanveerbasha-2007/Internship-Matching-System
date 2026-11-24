@@ -218,6 +218,7 @@ jobs:
 
       - name: Verify logout and login
         run: |
+          student_id=$(jq -r '.studentId' /tmp/registered.json)
           curl --fail --silent --cookie /tmp/student.cookies --request POST http://127.0.0.1:8080/api/auth/logout >/dev/null
           signed_out_status=$(curl --silent --output /tmp/signed-out.json --write-out "%{http_code}" --cookie /tmp/student.cookies http://127.0.0.1:8080/api/auth/me)
           test "$signed_out_status" = "401"
