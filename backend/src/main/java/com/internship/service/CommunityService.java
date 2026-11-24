@@ -247,7 +247,8 @@ public class CommunityService {
                     )) AS comment_count
             FROM students s
             LEFT JOIN student_profiles p ON p.student_id = s.student_id
-            WHERE s.student_id = ?            """,
+            WHERE s.student_id = ?
+            """,
             (rs, rowNum) -> new CommunityStudentProfileBase(
                 rs.getLong("student_id"),
                 rs.getString("full_name"),
