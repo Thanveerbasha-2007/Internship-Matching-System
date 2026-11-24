@@ -139,10 +139,15 @@ jobs:
             --request POST http://127.0.0.1:8080/api/auth/register \
             --header "Content-Type: application/json" \
             --data '{"fullName":"Regular Student","email":"regular-student@example.com","password":"StudentPass!234","department":"Computer Science","graduationYear":2027,"skillIds":[1]}')
+          echo "Regular student registration HTTP status: $regular_student_status"
+          cat /tmp/regular-student.json
           test "$regular_student_status" = "201"
           regular_student_id=$(jq -r '.studentId' /tmp/regular-student.json)
+          echo "Registered regular student ID: $regular_student_id"
           request_status=$(curl --silent --cookie /tmp.student.cookies --output /tmp/connection-request.json --write-out "%{http_code}" \
             --request POST "http://127.0.0.1:8080/api/network/$regular_student_id/request")
+          echo "Connection request HTTP status: $request_status"
+          cat /tmp/connection-request.json
           test "$request_status" = "201"
           jq -e '.relationshipStatus == "OUTGOING_PENDING"' /tmp/connection-request.json
           curl --fail --silent --cookie /tmp.regular-student.cookies http://127.0.0.1:8080/api/network | jq -e '(.incomingRequests | length) == 1'
