@@ -18,6 +18,7 @@
 | `internships` | Stores internship opportunity details. |
 | `internship_skills` | Connects internships to their required skills. |
 | `applications` | Records a student's application to an internship. |
+| `saved_internships` | Stores internships that a student has saved to revisit later. |
 
 ## Relationships
 
@@ -28,6 +29,7 @@
 - One skill can appear in many internships' `internship_skills` entries.
 - One student can submit applications to many internships.
 - One internship can receive applications from many students.
+- Students can save many internships, and an internship can be saved by many students; the `saved_internships` junction table stores this relationship.
 - A student can apply to a particular internship only once. This is enforced by a unique constraint on `(student_id, internship_id)`.
 
 ## Relationship overview
@@ -37,7 +39,7 @@ students 1 ---- 1 student_credentials\n\nstudents 1 ---- many student_skills man
 
 internships 1 ---- many internship_skills many ---- 1 skills
 
-students 1 ---- many applications many ---- 1 internships
+students 1 ---- many applications many ---- 1 internships\n\nstudents 1 ---- many saved_internships many ---- 1 internships
 ```
 
 ## Important design choices
@@ -48,6 +50,7 @@ students 1 ---- many applications many ---- 1 internships
 - Removing a student or internship that already has application records is restricted to avoid accidental loss of application history.
 - Skill matching can be built by comparing the skill IDs associated with a student and an internship. The exact ranking formula will be specified separately before implementation.
 - Student passwords are hashed with BCrypt and stored separately from profile fields in `student_credentials`.
+- `saved_internships` uses a composite primary key `(student_id, internship_id)` so a student cannot save the same opportunity twice.
 - Employer accounts and administrative roles are not part of the current prototype.
 
 ## Create the database
