@@ -169,6 +169,15 @@ jobs:
           test "$comment_id" != "null"
           curl --fail --silent --cookie /tmp/student.cookies "http://127.0.0.1:8080/api/community/posts/$post_id/comments" | jq -e 'length == 1'
 
+          experience_status=$(curl --silent --cookie /tmp/student.cookies --output /tmp/community-experience.json --write-out "%{http_code}" \
+            --request POST http://127.0.0.1:8080/api/community/posts \
+            --header "Content-Type: application/json" \
+            --data '{"category":"EXPERIENCES","title":"My first internship experience","body":"I learned to work with APIs and write clear updates."}')
+          test "$experience_status" = "201"
+
+          curl --fail --silent --cookie /tmp/student.cookies "http://127.0.0.1:8080/api/community/students/$student_id" | tee /tmp/community-student-profile.json
+          jq -e '.fullName == "Test Student Updated" and .department == "CSAI" and .graduationYear == 2028 and .discussionCount == 2 and .commentCount == 1 and (.skills | index("Java") != null) and (.experiencePosts | length == 1) and (.recentDiscussions | length == 2) and (has("email") | not)' /tmp/community-student-profile.json
+
           report_status=$(curl --silent --cookie /tmp/student.cookies --output /tmp/community-report.json --write-out "%{http_code}" \
             --request POST "http://127.0.0.1:8080/api/community/posts/$post_id/report" \
             --header "Content-Type: application/json" \
