@@ -76,35 +76,69 @@ jobs:
           cat /tmp/internship-api.log
           exit 1
 
-      - name: Verify API endpoints
+      - name: Verify public endpoints and authentication protection
         run: |
           curl --fail --silent http://127.0.0.1:8080/api/skills | tee /tmp/skills.json
-          curl --fail --silent http://127.0.0.1:8080/api/students | tee /tmp/students.json
           curl --fail --silent http://127.0.0.1:8080/api/internships | tee /tmp/internships.json
-          curl --fail --silent http://127.0.0.1:8080/api/students/1/recommendations | tee /tmp/recommendations.json
 
           grep -q "Java" /tmp/skills.json
-          grep -q "Aarav Sharma" /tmp/students.json
           grep -q "Backend Developer Intern" /tmp/internships.json
+
+          unauthenticated_status=$(curl --silent --output /tmp/unauthenticated.json --write-out "%{http_code}" http://127.0.0.1:8080/api/students)
+          test "$unauthenticated_status" = "401"
+
+      - name: Register, login, and verify account ownership
+        run: |
+          register_status=$(curl --silent --cookie-jar /tmp/student.cookies --output /tmp/registered.json --write-out "%{http_code}" \
+            --request POST http://127.0.0.1:8080/api/auth/register \
+            --header "Content-Type: application/json" \
+            --data '{"fullName":"Test Student","email":"test-student@example.com","password":"StudentPass!234","department":"Computer Science","graduationYear":2027,"skillIds":[1,2]}')
+          test "$register_status" = "201"
+          grep -q "Test Student" /tmp/registered.json
+          student_id=$(jq -r '.studentId' /tmp/registered.json)
+          test "$student_id" != "null"
+
+          curl --fail --silent --cookie /tmp/student.cookies http://127.0.0.1:8080/api/auth/me | tee /tmp/me.json
+          grep -q "Test Student" /tmp/me.json
+
+          curl --fail --silent --cookie /tmp/student.cookies "http://127.0.0.1:8080/api/students/$student_id/recommendations" | tee /tmp/recommendations.json
           grep -q "matchScore" /tmp/recommendations.json
+
+          owner_check_status=$(curl --silent --cookie /tmp/student.cookies --output /tmp/other-student.json --write-out "%{http_code}" http://127.0.0.1:8080/api/students/1)
+          test "$owner_check_status" = "403"
 
       - name: Verify application submission and duplicate protection
         run: |
-          status=$(curl --silent --output /tmp/application.json --write-out "%{http_code}" \
+          student_id=$(jq -r '.studentId' /tmp/registered.json)
+          status=$(curl --silent --cookie /tmp/student.cookies --output /tmp/application.json --write-out "%{http_code}" \
             --request POST http://127.0.0.1:8080/api/applications \
             --header "Content-Type: application/json" \
-            --data '{"studentId":1,"internshipId":1}')
+            --data "{\"studentId\":$student_id,\"internshipId\":1}")
           test "$status" = "201"
           grep -q "Backend Developer Intern" /tmp/application.json
 
-          duplicate_status=$(curl --silent --output /tmp/duplicate.json --write-out "%{http_code}" \
+          duplicate_status=$(curl --silent --cookie /tmp/student.cookies --output /tmp/duplicate.json --write-out "%{http_code}" \
             --request POST http://127.0.0.1:8080/api/applications \
             --header "Content-Type: application/json" \
-            --data '{"studentId":1,"internshipId":1}')
+            --data "{\"studentId\":$student_id,\"internshipId\":1}")
           test "$duplicate_status" = "409"
 
-          curl --fail --silent http://127.0.0.1:8080/api/students/1/applications | tee /tmp/applications.json
+          curl --fail --silent --cookie /tmp/student.cookies "http://127.0.0.1:8080/api/students/$student_id/applications" | tee /tmp/applications.json
           grep -q "Backend Developer Intern" /tmp/applications.json
+
+      - name: Verify logout and login
+        run: |
+          curl --fail --silent --cookie /tmp/student.cookies --request POST http://127.0.0.1:8080/api/auth/logout >/dev/null
+          signed_out_status=$(curl --silent --output /tmp/signed-out.json --write-out "%{http_code}" --cookie /tmp/student.cookies http://127.0.0.1:8080/api/auth/me)
+          test "$signed_out_status" = "401"
+
+          login_status=$(curl --silent --cookie-jar /tmp/login.cookies --output /tmp/login.json --write-out "%{http_code}" \
+            --request POST http://127.0.0.1:8080/api/auth/login \
+            --header "Content-Type: application/json" \
+            --data '{"email":"test-student@example.com","password":"StudentPass!234"}')
+          test "$login_status" = "200"
+          grep -q "Test Student" /tmp/login.json
+          curl --fail --silent --cookie /tmp/login.cookies http://127.0.0.1:8080/api/auth/me | grep -q "Test Student"
 
       - name: Stop Spring Boot process
         if: always()
