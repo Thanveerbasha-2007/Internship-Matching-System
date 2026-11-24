@@ -1,7 +1,8 @@
 package com.internship.service;
 
 import com.internship.dto.CommunityCommentResponse;
-import com.internship.dto.CommunityPostResponse;\nimport com.internship.dto.CommunityStudentProfileResponse;
+import com.internship.dto.CommunityPostResponse;
+import com.internship.dto.CommunityStudentProfileResponse;
 import com.internship.dto.CreateCommunityCommentRequest;
 import com.internship.dto.CreateCommunityPostRequest;
 import com.internship.dto.ReportCommunityPostRequest;
