@@ -39,7 +39,8 @@ The application maintains student skill profiles, stores internship requirements
 - Edit your profile, academic details, and skill set
 - Compare matched and missing internship skills and view ranked recommendations
 - Submit applications and filter the application tracker by status
-- Student community for internship questions, experience sharing, interview preparation, career advice, and student-life discussions\n- Community student profiles with skills, academic details, experience posts, recent discussion history, and activity counts
+- Student community for internship questions, experience sharing, interview preparation, career advice, and student-life discussions
+- Community student profiles with skills, academic details, experience posts, recent discussion history, and activity counts
 - Create and edit discussions, comment, upvote, and report posts; students can delete their own posts and comments
 - Session-protected profile, saved-internship, recommendation, application, and community endpoints
 
