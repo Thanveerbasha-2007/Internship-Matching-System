@@ -373,6 +373,7 @@ function CommunityPage({ student }) {
   const [reportReason, setReportReason] = useState("SPAM");
   const [reportDetails, setReportDetails] = useState("");
   const [reportBusy, setReportBusy] = useState(false);
+  const [selectedProfile, setSelectedProfile] = useState(null);
 
   async function loadPosts() {
     setLoading(true);
@@ -534,6 +535,16 @@ function CommunityPage({ student }) {
     }
   }
 
+  async function openStudentProfile(studentId) {
+    setSelectedProfile({ loading: true, data: null, error: "" });
+    try {
+      const data = await api(`/api/community/students/${studentId}`);
+      setSelectedProfile({ loading: false, data, error: "" });
+    } catch (requestError) {
+      setSelectedProfile({ loading: false, data: null, error: requestError.message });
+    }
+  }
+
   const totalComments = posts.reduce((sum, post) => sum + Number(post.commentCount || 0), 0);
   const postCountByCategory = posts.reduce((counts, post) => {
     counts[post.category] = (counts[post.category] || 0) + 1;
@@ -605,7 +616,7 @@ function CommunityPage({ student }) {
                 <article className="community-post" key={post.postId}>
                   <div className="community-post-top">
                     <div className="community-author-avatar">{initials(post.authorName)}</div>
-                    <div className="community-author-meta"><strong>{post.authorName}</strong><span>{post.authorDepartment || "Student"} · {communityTimeAgo(post.createdAt)}</span></div>
+                    <div className="community-author-meta"><button type="button" className="community-profile-link" onClick={() => openStudentProfile(post.authorStudentId)}>{post.authorName}</button><span>{post.authorDepartment || "Student"} · {communityTimeAgo(post.createdAt)}</span></div>
                     <span className="community-post-category">{communityCategoryLabel(post.category)}</span>
                   </div>
                   <h3 className="community-post-title">{post.title}</h3>
@@ -638,7 +649,7 @@ function CommunityPage({ student }) {
                       {(commentsByPost[post.postId] || []).map((comment) => (
                         <div className="community-comment" key={comment.commentId}>
                           <div className="community-comment-avatar">{initials(comment.authorName)}</div>
-                          <div className="community-comment-content"><div><strong>{comment.authorName}</strong><span>{communityTimeAgo(comment.createdAt)}</span></div><p>{comment.body}</p></div>
+                          <div className="community-comment-content"><div><button type="button" className="community-profile-link" onClick={() => openStudentProfile(comment.authorStudentId)}>{comment.authorName}</button><span>{communityTimeAgo(comment.createdAt)}</span></div><p>{comment.body}</p></div>
                           {comment.authorStudentId === student.studentId && <button className="community-icon-button" type="button" title="Delete comment" onClick={() => deleteComment(post.postId, comment.commentId)}><Icon name="trash" size={14}/></button>}
                         </div>
                       ))}
@@ -681,6 +692,70 @@ function CommunityPage({ student }) {
           </div>
         </aside>
       </div>
+
+      {selectedProfile && (
+        <div className="community-profile-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setSelectedProfile(null); }}>
+          <section className="community-profile-modal" role="dialog" aria-modal="true" aria-label="Student profile">
+            <button className="community-profile-close" type="button" onClick={() => setSelectedProfile(null)} aria-label="Close profile"><Icon name="close" size={18}/></button>
+            {selectedProfile.loading ? (
+              <div className="community-profile-loading"><div className="loader"/><p>Loading student profile…</p></div>
+            ) : selectedProfile.error ? (
+              <div className="community-profile-loading"><p>{selectedProfile.error}</p><button className="button button-outline" onClick={() => setSelectedProfile(null)}>Close</button></div>
+            ) : selectedProfile.data && (
+              <>
+                <div className="community-profile-cover"/>
+                <div className="community-profile-content">
+                  <div className="community-profile-avatar">{initials(selectedProfile.data.fullName)}</div>
+                  <div className="community-profile-heading">
+                    <div><h2>{selectedProfile.data.fullName}</h2><p>{selectedProfile.data.department || "Student"}{selectedProfile.data.graduationYear ? ` · Class of ${selectedProfile.data.graduationYear}` : ""}</p></div>
+                    {selectedProfile.data.studentId === student.studentId && <span className="community-profile-you">Your profile</span>}
+                  </div>
+                  <div className="community-profile-stats">
+                    <div><strong>{selectedProfile.data.discussionCount}</strong><span>Discussions</span></div>
+                    <div><strong>{selectedProfile.data.commentCount}</strong><span>Replies</span></div>
+                    <div><strong>{selectedProfile.data.skills.length}</strong><span>Skills</span></div>
+                  </div>
+                  <div className="community-profile-section">
+                    <div className="section-kicker">SKILLS & EXPERTISE</div>
+                    <div className="skill-list">
+                      {selectedProfile.data.skills.length
+                        ? selectedProfile.data.skills.map((skill) => <span className="skill-chip" key={skill}>{skill}</span>)
+                        : <span className="community-profile-muted">No skills added to this profile yet.</span>}
+                    </div>
+                  </div>
+                  <div className="community-profile-section">
+                    <div className="section-kicker">SHARED EXPERIENCES</div>
+                    {selectedProfile.data.experiencePosts.length ? (
+                      <div className="community-profile-activity-list">
+                        {selectedProfile.data.experiencePosts.map((item) => (
+                          <article className="community-profile-activity" key={item.postId}>
+                            <span>{communityCategoryLabel(item.category)} · {communityTimeAgo(item.createdAt)}</span>
+                            <h4>{item.title}</h4><p>{item.body}</p>
+                          </article>
+                        ))}
+                      </div>
+                    ) : <p className="community-profile-muted">This student has not shared an experience post yet.</p>}
+                  </div>
+                  <div className="community-profile-section">
+                    <div className="section-kicker">RECENT DISCUSSION HISTORY</div>
+                    {selectedProfile.data.recentDiscussions.length ? (
+                      <div className="community-profile-activity-list">
+                        {selectedProfile.data.recentDiscussions.map((item) => (
+                          <article className="community-profile-activity" key={item.postId}>
+                            <span>{communityCategoryLabel(item.category)} · {communityTimeAgo(item.createdAt)}</span>
+                            <h4>{item.title}</h4><p>{item.body}</p>
+                          </article>
+                        ))}
+                      </div>
+                    ) : <p className="community-profile-muted">No visible discussions yet.</p>}
+                  </div>
+                  <p className="community-profile-privacy">Only details shared for the student community are shown here. Email addresses and saved internships remain private.</p>
+                </div>
+              </>
+            )}
+          </section>
+        </div>
+      )}
     </section>
   );
 }
