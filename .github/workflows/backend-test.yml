@@ -144,6 +144,10 @@ jobs:
           test "$regular_student_status" = "201"
           regular_student_id=$(jq -r '.studentId' /tmp/regular-student.json)
           echo "Registered regular student ID: $regular_student_id"
+          regular_me_status=$(curl --silent --cookie /tmp/regular-student.cookies --output /tmp/regular-student-me.json --write-out "%{http_code}" http://127.0.0.1:8080/api/auth/me)
+          echo "Recipient session verification HTTP status: $regular_me_status"
+          cat /tmp/regular-student-me.json
+          test "$regular_me_status" = "200"
           student_network_login_status=$(curl --silent --cookie-jar /tmp/student-network.cookies --output /tmp/student-network-login.json --write-out "%{http_code}" \
             --request POST http://127.0.0.1:8080/api/auth/login \
             --header "Content-Type: application/json" \
@@ -163,8 +167,8 @@ jobs:
           cat /tmp/connection-request.json
           test "$request_status" = "201"
           jq -e '.relationshipStatus == "OUTGOING_PENDING"' /tmp/connection-request.json
-          curl --fail --silent --cookie /tmp.regular-student.cookies http://127.0.0.1:8080/api/network | jq -e '(.incomingRequests | length) == 1'
-          accept_status=$(curl --silent --cookie /tmp.regular-student.cookies --output /tmp/connection-accepted.json --write-out "%{http_code}" \
+          curl --fail --silent --cookie /tmp/regular-student.cookies http://127.0.0.1:8080/api/network | jq -e '(.incomingRequests | length) == 1'
+          accept_status=$(curl --silent --cookie /tmp/regular-student.cookies --output /tmp/connection-accepted.json --write-out "%{http_code}" \
             --request PATCH "http://127.0.0.1:8080/api/network/requests/$student_id/accept")
           test "$accept_status" = "200"
           jq -e '.relationshipStatus == "CONNECTED"' /tmp/connection-accepted.json
