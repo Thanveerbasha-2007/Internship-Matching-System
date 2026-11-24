@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 const API_BASE = (import.meta.env.VITE_API_BASE_URL || "").replace(/\/$/, "");
 
@@ -59,7 +59,7 @@ function Icon({ name, size = 18 }) {
   return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{paths[name] || paths.spark}</svg>;
 }
 
-function AuthPanel({ skills, mode, setMode, onSubmit, busy, error }) {
+function AuthPanel({ skills, mode, setMode, onSubmit, onGoogleCredential, googleClientId, busy, error }) {
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -67,6 +67,58 @@ function AuthPanel({ skills, mode, setMode, onSubmit, busy, error }) {
   const [graduationYear, setGraduationYear] = useState("2027");
   const [skillIds, setSkillIds] = useState([]);
   const [showPassword, setShowPassword] = useState(false);
+  const googleButtonRef = useRef(null);
+  const googleCallbackRef = useRef(onGoogleCredential);
+
+  useEffect(() => {
+    googleCallbackRef.current = onGoogleCredential;
+  }, [onGoogleCredential]);
+
+  useEffect(() => {
+    if (!googleClientId || !googleButtonRef.current) return undefined;
+    let cancelled = false;
+    let script = document.querySelector('script[data-google-identity="true"]');
+
+    const renderButton = () => {
+      if (cancelled || !window.google?.accounts?.id || !googleButtonRef.current) return;
+      window.google.accounts.id.initialize({
+        client_id: googleClientId,
+        callback: (response) => {
+          if (response?.credential) googleCallbackRef.current(response.credential);
+        },
+        ux_mode: "popup",
+        auto_select: false,
+      });
+      googleButtonRef.current.replaceChildren();
+      window.google.accounts.id.renderButton(googleButtonRef.current, {
+        theme: "outline",
+        size: "large",
+        shape: "rectangular",
+        text: mode === "login" ? "signin_with" : "signup_with",
+        logo_alignment: "left",
+        width: 320,
+      });
+    };
+
+    if (window.google?.accounts?.id) {
+      renderButton();
+    } else {
+      if (!script) {
+        script = document.createElement("script");
+        script.src = "https://accounts.google.com/gsi/client";
+        script.async = true;
+        script.defer = true;
+        script.dataset.googleIdentity = "true";
+        document.head.appendChild(script);
+      }
+      script.addEventListener("load", renderButton);
+    }
+
+    return () => {
+      cancelled = true;
+      script?.removeEventListener("load", renderButton);
+    };
+  }, [googleClientId, mode]);
 
   function toggleSkill(id) {
     setSkillIds((current) => current.includes(id) ? current.filter((item) => item !== id) : [...current, id]);
@@ -130,6 +182,11 @@ function AuthPanel({ skills, mode, setMode, onSubmit, busy, error }) {
           {error && <div className="auth-error" role="alert">{error}</div>}
           <button className="button button-dark auth-submit" type="submit" disabled={busy}>{busy ? "Please wait…" : mode === "login" ? "Sign in to InternMatch" : "Create student account"} <Icon name="arrow" size={16}/></button>
         </form>
+        {googleClientId && <>
+          <div className="google-auth-divider"><span>OR</span></div>
+          <div className="google-auth-slot" ref={googleButtonRef} aria-label="Continue with Google"/>
+          <p className="google-auth-note">Use your Google account to sign in securely.</p>
+        </>}
         <div className="auth-secure"><Icon name="lock" size={14}/> Your student account is protected by a private session.</div>
       </section>
     </div>
@@ -211,6 +268,7 @@ function InternshipDetails({ internship, onClose, onApply, applied, applying }) 
 
 export default function App() {
   const [currentStudent, setCurrentStudent] = useState(null);
+  const [googleClientId, setGoogleClientId] = useState("");
   const [internships, setInternships] = useState([]);
   const [skills, setSkills] = useState([]);
   const [recommendations, setRecommendations] = useState([]);
@@ -235,15 +293,17 @@ export default function App() {
       setLoading(true);
       setAuthLoading(true);
       try {
-        const [internshipData, skillData, sessionStudent] = await Promise.all([
+        const [internshipData, skillData, sessionStudent, authConfig] = await Promise.all([
           api("/api/internships"),
           api("/api/skills"),
           api("/api/auth/me").catch(() => null),
+          api("/api/auth/config").catch(() => ({ googleClientId: "" })),
         ]);
         if (!active) return;
         setInternships(internshipData);
         setSkills(skillData);
         setCurrentStudent(sessionStudent);
+        setGoogleClientId(authConfig?.googleClientId || "");
         setApiOnline(true);
       } catch (error) {
         if (!active) return;
@@ -303,6 +363,25 @@ export default function App() {
       setApplications([]);
       setTab("discover");
       setNotice(mode === "register" ? "Your student account has been created." : `Welcome back, ${student.fullName.split(" ")[0]}.`);
+    } catch (error) {
+      setAuthError(error.message);
+    } finally {
+      setAuthBusy(false);
+    }
+  }
+
+  async function handleGoogleCredential(credential) {
+    setAuthBusy(true);
+    setAuthError("");
+    try {
+      const student = await api("/api/auth/google", {
+        method: "POST",
+        body: JSON.stringify({ credential }),
+      });
+      setCurrentStudent(student);
+      setApplications([]);
+      setTab("discover");
+      setNotice(`Signed in with Google. Welcome, ${student.fullName.split(" ")[0]}.`);
     } catch (error) {
       setAuthError(error.message);
     } finally {
@@ -370,7 +449,7 @@ export default function App() {
     return (
       <div className="app-shell auth-shell">
         <header className="site-header auth-header"><a className="brand" href="#top"><span className="brand-symbol"><Icon name="spark" size={19}/></span><span>intern<span>match</span></span></a><span className="mode-indicator"><span className="status-light live"/>Secure student access</span></header>
-        <AuthPanel skills={skills} mode={authMode} setMode={(mode) => { setAuthMode(mode); setAuthError(""); }} onSubmit={handleAuth} busy={authBusy} error={authError}/>
+        <AuthPanel skills={skills} mode={authMode} setMode={(mode) => { setAuthMode(mode); setAuthError(""); }} onSubmit={handleAuth} onGoogleCredential={handleGoogleCredential} googleClientId={googleClientId} busy={authBusy} error={authError}/>
         <footer className="site-footer"><a className="brand footer-brand" href="#top"><span className="brand-symbol"><Icon name="spark" size={17}/></span><span>intern<span>match</span></span></a><span>Helping skills find the right opportunity.</span><span>Internship Matching System · Student project</span></footer>
       </div>
     );
