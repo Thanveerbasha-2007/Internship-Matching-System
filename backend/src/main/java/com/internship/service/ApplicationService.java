@@ -18,11 +18,21 @@ public class ApplicationService {
     @Transactional
     public ApplicationResponse apply(ApplicationRequest request) {
         ensureExists("students", "student_id", request.studentId(), "Student");
-        List<String> status = jdbc.query(
-            "SELECT status FROM internships WHERE internship_id = ?",
-            (rs, n) -> rs.getString("status"), request.internshipId());
-        if (status.isEmpty()) throw new NotFoundException("Internship " + request.internshipId() + " was not found.");
-        if (!"OPEN".equals(status.get(0))) throw new IllegalArgumentException("This internship is not accepting applications.");
+        List<InternshipAvailability> availability = jdbc.query(
+            "SELECT status, application_deadline FROM internships WHERE internship_id = ?",
+            (rs, n) -> new InternshipAvailability(
+                rs.getString("status"),
+                rs.getDate("application_deadline") == null
+                    ? null
+                    : rs.getDate("application_deadline").toLocalDate()
+            ),
+            request.internshipId());
+        if (availability.isEmpty()) throw new NotFoundException("Internship " + request.internshipId() + " was not found.");
+        InternshipAvailability opportunity = availability.get(0);
+        if (!"OPEN".equals(opportunity.status())) throw new IllegalArgumentException("This internship is not accepting applications.");
+        if (opportunity.deadline() != null && opportunity.deadline().isBefore(java.time.LocalDate.now())) {
+            throw new IllegalArgumentException("The application deadline for this internship has passed.");
+        }
         jdbc.update("INSERT INTO applications (student_id, internship_id) VALUES (?, ?)",
             request.studentId(), request.internshipId());
         return findOne(request.studentId(), request.internshipId());
@@ -44,6 +54,8 @@ public class ApplicationService {
             Integer.class, id);
         if (count == null || count == 0) throw new NotFoundException(label + " " + id + " was not found.");
     }
+
+    private record InternshipAvailability(String status, java.time.LocalDate deadline) {}
 
     private ApplicationResponse map(java.sql.ResultSet rs, int n) throws java.sql.SQLException {
         Timestamp timestamp = rs.getTimestamp("applied_at");
