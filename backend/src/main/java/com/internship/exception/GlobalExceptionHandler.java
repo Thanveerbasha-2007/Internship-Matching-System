@@ -34,7 +34,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(DataIntegrityViolationException.class)
     public ResponseEntity<Map<String, Object>> handleConflict(DataIntegrityViolationException ex) {
         return response(HttpStatus.CONFLICT,
-            "The request conflicts with existing data. A student may already have applied to this internship.");
+            "The request conflicts with existing data (for example, a duplicate email or an existing application).");
     }
 
     @ExceptionHandler(IllegalArgumentException.class)
