@@ -39,7 +39,13 @@ public class AuthController {
     @PostMapping("/google")
     public StudentResponse google(@Valid @RequestBody GoogleLoginRequest request, HttpServletRequest servletRequest) {
         replaceSession(servletRequest);
-        return auth.loginWithGoogle(request.credential(), servletRequest.getSession(true));
+        return auth.loginWithGoogle(
+            request.credential(),
+            request.department(),
+            request.graduationYear(),
+            request.skillIds(),
+            servletRequest.getSession(true)
+        );
     }
 
     @GetMapping("/config")
