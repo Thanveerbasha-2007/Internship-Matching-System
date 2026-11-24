@@ -87,6 +87,15 @@ jobs:
           unauthenticated_status=$(curl --silent --output /tmp/unauthenticated.json --write-out "%{http_code}" http://127.0.0.1:8080/api/students)
           test "$unauthenticated_status" = "401"
 
+          curl --fail --silent http://127.0.0.1:8080/api/auth/config | tee /tmp/auth-config.json
+          grep -q '"googleClientId":""' /tmp/auth-config.json
+
+          google_status=$(curl --silent --output /tmp/google-unconfigured.json --write-out "%{http_code}" \
+            --request POST http://127.0.0.1:8080/api/auth/google \
+            --header "Content-Type: application/json" \
+            --data '{"credential":"not-a-real-token"}')
+          test "$google_status" = "503"
+
       - name: Register, login, and verify account ownership
         run: |
           register_status=$(curl --silent --cookie-jar /tmp/student.cookies --output /tmp/registered.json --write-out "%{http_code}" \
