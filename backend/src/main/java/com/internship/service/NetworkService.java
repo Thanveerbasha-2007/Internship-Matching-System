@@ -22,6 +22,10 @@ public class NetworkService {
         List<StudentNetworkCardResponse> people = jdbc.query("""
             SELECT s.student_id, s.full_name, s.department, s.graduation_year,
                    p.headline, p.location, p.avatar_url,
+                   (SELECT COUNT(*) FROM student_follows sf
+                    WHERE sf.followed_student_id = s.student_id) AS follower_count,
+                   EXISTS (SELECT 1 FROM student_follows sf
+                    WHERE sf.follower_student_id = ? AND sf.followed_student_id = s.student_id) AS followed_by_me,
                    CASE
                      WHEN EXISTS (SELECT 1 FROM student_connections c
                        WHERE c.status = 'ACCEPTED'
@@ -44,8 +48,9 @@ public class NetworkService {
                 rs.getLong("student_id"), rs.getString("full_name"), rs.getString("department"),
                 (Integer) rs.getObject("graduation_year"), rs.getString("headline"),
                 rs.getString("location"), rs.getString("avatar_url"), List.of(),
-                rs.getString("relationship_status")),
-            studentId, studentId, studentId, studentId, studentId, normalized, term)
+                rs.getString("relationship_status"), rs.getLong("follower_count"),
+                rs.getBoolean("followed_by_me")),
+            studentId, studentId, studentId, studentId, studentId, studentId, normalized, term)
             .stream().map(this::withSkills).toList();
 
         List<StudentNetworkCardResponse> connections = people.stream().filter(p -> "CONNECTED".equals(p.connectionStatus())).toList();
@@ -130,13 +135,34 @@ public class NetworkService {
         if (changed == 0) throw new NotFoundException("That connection was not found.");
     }
 
+    @Transactional
+    public void followStudent(Long followerId, Long followedId) {
+        ensureStudent(followerId);
+        ensureStudent(followedId);
+        if (followerId.equals(followedId))
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "You cannot follow your own account.");
+        jdbc.update("INSERT IGNORE INTO student_follows (follower_student_id, followed_student_id) VALUES (?, ?)",
+            followerId, followedId);
+    }
+
+    @Transactional
+    public void unfollowStudent(Long followerId, Long followedId) {
+        ensureStudent(followerId);
+        ensureStudent(followedId);
+        if (followerId.equals(followedId))
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "You cannot follow your own account.");
+        jdbc.update("DELETE FROM student_follows WHERE follower_student_id = ? AND followed_student_id = ?",
+            followerId, followedId);
+    }
+
     private StudentNetworkCardResponse withSkills(StudentNetworkCardResponse p) {
         List<String> skills = jdbc.query("""
             SELECT s.skill_name FROM student_skills ss JOIN skills s ON s.skill_id = ss.skill_id
             WHERE ss.student_id = ? ORDER BY s.skill_name
             """, (rs, rowNum) -> rs.getString("skill_name"), p.studentId());
         return new StudentNetworkCardResponse(p.studentId(), p.fullName(), p.department(), p.graduationYear(),
-            p.headline(), p.location(), p.avatarUrl(), skills, p.connectionStatus());
+            p.headline(), p.location(), p.avatarUrl(), skills, p.connectionStatus(),
+            p.followerCount(), p.followedByMe());
     }
     private void ensureStudent(Long id) {
         Integer count = jdbc.queryForObject("SELECT COUNT(*) FROM students WHERE student_id = ?", Integer.class, id);

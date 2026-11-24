@@ -927,3 +927,16 @@ a { color: inherit; text-decoration: none; }
 
 .network-card-actions .network-view-button { flex: 0 0 auto; }
 @media (max-width: 560px) { .network-card-actions { flex-wrap: wrap; } .network-card-actions .network-view-button { flex-basis: 100%; } }
+
+
+/* One-way follows complement mutual student connections. */
+.network-card-actions { flex-wrap: wrap; }
+.network-card-actions .button { flex: 1 1 calc(50% - 8px); min-width: 0; }
+.network-follow-button { color: #286a58; border-color: #cbded4; background: #f3faf6; }
+.network-follow-button:hover:not(:disabled) { background: #e7f3ec; }
+.network-follow-button.is-following { color: #52645d; background: #f3f5f3; border-color: #e1e7e2; }
+.community-profile-connect { display: flex; align-items: center; justify-content: flex-end; flex-wrap: wrap; gap: 8px; }
+.community-profile-stats { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+@media (max-width: 600px) {
+  .community-profile-stats { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}

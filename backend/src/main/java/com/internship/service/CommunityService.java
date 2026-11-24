@@ -244,7 +244,9 @@ public class CommunityService {
                     WHERE c.author_student_id = s.student_id AND EXISTS (
                       SELECT 1 FROM community_posts visible_post
                       WHERE visible_post.post_id = c.post_id AND visible_post.status = 'VISIBLE'
-                    )) AS comment_count
+                    )) AS comment_count,
+                   (SELECT COUNT(*) FROM student_follows sf
+                    WHERE sf.followed_student_id = s.student_id) AS follower_count
             FROM students s
             LEFT JOIN student_profiles p ON p.student_id = s.student_id
             WHERE s.student_id = ?
@@ -265,7 +267,8 @@ public class CommunityService {
                 rs.getString("projects"),
                 rs.getString("achievements"),
                 rs.getLong("discussion_count"),
-                rs.getLong("comment_count")
+                rs.getLong("comment_count"),
+                rs.getLong("follower_count")
             ),
             studentId
         );
@@ -319,7 +322,12 @@ public class CommunityService {
                 studentId,
                 studentId
             ),
-            relationshipStatus(viewerId, studentId)
+            relationshipStatus(viewerId, studentId),
+            profile.followerCount(),
+            jdbc.queryForObject(
+                "SELECT COUNT(*) FROM student_follows WHERE follower_student_id = ? AND followed_student_id = ?",
+                Integer.class, viewerId, studentId
+            ) > 0
         );
     }
 
@@ -359,7 +367,7 @@ public class CommunityService {
         Long studentId, String fullName, String department, Integer graduationYear,
         String headline, String about, String location, String avatarUrl, String coverImageUrl,
         String linkedinUrl, String githubUrl, String portfolioUrl, String projects, String achievements,
-        Long discussionCount, Long commentCount
+        Long discussionCount, Long commentCount, Long followerCount
     ) {}
 
     private CommunityCommentResponse findComment(Long commentId) {

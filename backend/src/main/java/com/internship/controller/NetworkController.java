@@ -38,5 +38,15 @@ public class NetworkController {
         network.removeConnection(currentStudentId(session), otherStudentId);
         return Map.of("relationshipStatus", "NONE");
     }
+    @PostMapping("/{studentId}/follow")
+    public Map<String, Boolean> follow(@PathVariable Long studentId, HttpSession session) {
+        network.followStudent(currentStudentId(session), studentId);
+        return Map.of("following", true);
+    }
+    @DeleteMapping("/{studentId}/follow")
+    public Map<String, Boolean> unfollow(@PathVariable Long studentId, HttpSession session) {
+        network.unfollowStudent(currentStudentId(session), studentId);
+        return Map.of("following", false);
+    }
     private Long currentStudentId(HttpSession session) { return (Long) session.getAttribute("studentId"); }
 }

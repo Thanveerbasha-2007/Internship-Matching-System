@@ -252,3 +252,16 @@ CREATE TABLE IF NOT EXISTS student_connections (
   CONSTRAINT fk_student_connections_recipient FOREIGN KEY (recipient_student_id) REFERENCES students (student_id)
     ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- One-way follows are separate from mutual connection requests.
+CREATE TABLE IF NOT EXISTS student_follows (
+  follower_student_id BIGINT UNSIGNED NOT NULL,
+  followed_student_id BIGINT UNSIGNED NOT NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (follower_student_id, followed_student_id),
+  KEY idx_student_follows_followed (followed_student_id),
+  CONSTRAINT fk_student_follows_follower FOREIGN KEY (follower_student_id) REFERENCES students (student_id)
+    ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT fk_student_follows_followed FOREIGN KEY (followed_student_id) REFERENCES students (student_id)
+    ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
