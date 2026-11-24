@@ -140,7 +140,7 @@ Returns a student profile for the signed-in community viewer. The response delib
 - `studentId`, `fullName`, `department`, `graduationYear`, `skills`
 - `discussionCount` and `commentCount` for visible posts and authored replies
 - `experiencePosts` containing up to five visible posts in the `EXPERIENCES` category
-- `recentDiscussions` containing up to ten recent visible discussions
+- `recentDiscussions` containing up to ten recent visible non-experience discussions (experience posts are shown separately)
 
 Only community-visible posts are included. Students cannot use this route to view another student's saved internships, applications, login credentials, or email address.
 
