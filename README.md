@@ -27,7 +27,8 @@ The application maintains student skill profiles, stores internship requirements
 
 ## Features in the current prototype
 
-- Student registration and login with password hashing and private sessions
+- Student registration and login with BCrypt password hashing and private sessions
+- Google sign-in with server-verified Google ID tokens and verified-email account linking
 - Student-specific profile, academic details, and selected skills
 - Browse internship opportunities and open a full details view
 - Search by role, company, location, and skill
@@ -40,7 +41,7 @@ The application maintains student skill profiles, stores internship requirements
 
 ## Student accounts and privacy
 
-Students create an account using their name, email, password, department, graduation year, and selected skills. Passwords are stored as BCrypt hashes. The browser receives an HttpOnly session cookie; profile, recommendation, and application endpoints are restricted to the signed-in student. Open internship listings and the skill catalogue remain public.
+Students can create an account using their name, email, password, department, graduation year, and selected skills, or use Google sign-in. Google ID tokens are verified by the backend against the configured Google OAuth client ID; the app accepts only verified Google email addresses. A verified Google email links to an existing student account with the same email, or creates a new student account. When signing up with Google from the Create account tab, the department, graduation year, and selected skills are also saved. Passwords for password-based accounts are stored as BCrypt hashes. The browser receives an HttpOnly session cookie; profile, recommendation, and application endpoints are restricted to the signed-in student. Open internship listings and the skill catalogue remain public.
 
 Demo records in the database are fictional seed data and are not login accounts. Register with your own email to create a personal account.
 
@@ -85,8 +86,11 @@ $env:DB_URL="jdbc:mysql://localhost:3306/internship_matching?allowPublicKeyRetri
 $env:DB_USERNAME="root"
 $env:DB_PASSWORD="your-mysql-password"
 $env:CORS_ALLOWED_ORIGINS="http://localhost:5173"
+$env:GOOGLE_CLIENT_ID="your-google-oauth-web-client-id"
 mvn -f backend/pom.xml spring-boot:run
 ```
+
+Google sign-in is optional during local development. Create a Google OAuth 2.0 Client ID of type **Web application**, add `http://localhost:5173` as an authorized JavaScript origin, and set `GOOGLE_CLIENT_ID` before starting the backend. No Google client secret is required for this Google Identity Services ID-token flow.
 
 The backend also initializes its packaged schema and sample data on startup. Its default local MySQL username/password fallback is for development only; configure proper credentials outside local development.
 
