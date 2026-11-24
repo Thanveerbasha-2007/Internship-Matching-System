@@ -1,0 +1,114 @@
+name: Database integration test
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "database/**"
+      - ".github/workflows/database-test.yml"
+  pull_request:
+    paths:
+      - "database/**"
+      - ".github/workflows/database-test.yml"
+  workflow_dispatch:
+
+jobs:
+  mysql-integration:
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -proot"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=20
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Install MySQL client
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y default-mysql-client
+
+      - name: Wait for MySQL
+        env:
+          MYSQL_PWD: root
+        run: |
+          for attempt in $(seq 1 30); do
+            if mysql --protocol=TCP -h 127.0.0.1 -uroot -e "SELECT 1" >/dev/null 2>&1; then
+              echo "MySQL is ready"
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "MySQL did not become ready"
+          exit 1
+
+      - name: Create database schema
+        env:
+          MYSQL_PWD: root
+        run: mysql --protocol=TCP -h 127.0.0.1 -uroot < database/schema.sql
+
+      - name: Insert demo data
+        env:
+          MYSQL_PWD: root
+        run: mysql --protocol=TCP -h 127.0.0.1 -uroot < database/seed/sample-data.sql
+
+      - name: Verify demo data counts
+        env:
+          MYSQL_PWD: root
+        run: |
+          students=$(mysql --protocol=TCP -h 127.0.0.1 -uroot --batch --skip-column-names -e "SELECT COUNT(*) FROM internship_matching.students")
+          skills=$(mysql --protocol=TCP -h 127.0.0.1 -uroot --batch --skip-column-names -e "SELECT COUNT(*) FROM internship_matching.skills")
+          internships=$(mysql --protocol=TCP -h 127.0.0.1 -uroot --batch --skip-column-names -e "SELECT COUNT(*) FROM internship_matching.internships")
+
+          test "$students" = "4"
+          test "$skills" = "10"
+          test "$internships" = "4"
+
+          echo "Students: $students"
+          echo "Skills: $skills"
+          echo "Internships: $internships"
+
+      - name: Verify skill-matching overlap
+        env:
+          MYSQL_PWD: root
+        run: |
+          result=$(mysql --protocol=TCP -h 127.0.0.1 -uroot --batch --skip-column-names -e "
+            USE internship_matching;
+            SELECT COUNT(*)
+            FROM students st
+            JOIN internships i
+            JOIN internship_skills required_skill
+              ON required_skill.internship_id = i.internship_id
+            JOIN student_skills matched_skill
+              ON matched_skill.student_id = st.student_id
+             AND matched_skill.skill_id = required_skill.skill_id
+            WHERE
+              (st.email = 'aarav.sharma@example.com' AND i.title = 'Backend Developer Intern' AND i.company_name = 'Northstar Tech')
+              OR (st.email = 'diya.reddy@example.com' AND i.title = 'Frontend Developer Intern' AND i.company_name = 'PixelSpring Labs')
+              OR (st.email = 'kabir.mehta@example.com' AND i.title = 'Machine Learning Intern' AND i.company_name = 'ModelBridge')
+              OR (st.email = 'nisha.verma@example.com' AND i.title = 'Data Analyst Intern' AND i.company_name = 'InsightWorks');
+          ")
+          test "$result" = "9"
+          echo "Expected matching skill associations found: $result"
+
+      - name: Verify seed script is repeatable
+        env:
+          MYSQL_PWD: root
+        run: |
+          mysql --protocol=TCP -h 127.0.0.1 -uroot < database/seed/sample-data.sql
+          students=$(mysql --protocol=TCP -h 127.0.0.1 -uroot --batch --skip-column-names -e "SELECT COUNT(*) FROM internship_matching.students")
+          skills=$(mysql --protocol=TCP -h 127.0.0.1 -uroot --batch --skip-column-names -e "SELECT COUNT(*) FROM internship_matching.skills")
+          internships=$(mysql --protocol=TCP -h 127.0.0.1 -uroot --batch --skip-column-names -e "SELECT COUNT(*) FROM internship_matching.internships")
+          test "$students" = "4"
+          test "$skills" = "10"
+          test "$internships" = "4"
+          echo "Seed script can be rerun without duplicating demo records."
