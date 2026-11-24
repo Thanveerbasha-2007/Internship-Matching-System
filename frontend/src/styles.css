@@ -504,3 +504,110 @@ a { color: inherit; text-decoration: none; }
   .community-composer-bottom { align-items: flex-start; flex-direction: column; }
   .community-composer-bottom .button { width: 100%; }
 }
+
+
+/* Community student profiles */
+.community-profile-link {
+  padding: 0;
+  border: 0;
+  color: #29483b;
+  background: transparent;
+  font: inherit;
+  font-weight: 750;
+  text-align: left;
+  cursor: pointer;
+}
+.community-profile-link:hover { color: #277454; text-decoration: underline; }
+.community-profile-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: grid;
+  place-items: center;
+  padding: 22px;
+  background: rgba(19, 35, 29, .58);
+  backdrop-filter: blur(5px);
+}
+.community-profile-modal {
+  position: relative;
+  width: min(700px, 100%);
+  max-height: min(88vh, 850px);
+  overflow-y: auto;
+  border: 1px solid #e1e9e2;
+  border-radius: 18px;
+  background: #fff;
+  box-shadow: 0 24px 80px rgba(10, 30, 20, .22);
+}
+.community-profile-close {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  z-index: 2;
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(255,255,255,.55);
+  border-radius: 50%;
+  color: #29483b;
+  background: rgba(255,255,255,.9);
+  cursor: pointer;
+}
+.community-profile-cover {
+  height: 150px;
+  background:
+    radial-gradient(circle at 78% 28%, rgba(202, 231, 209, .44), transparent 23%),
+    radial-gradient(circle at 18% 95%, rgba(156, 201, 176, .35), transparent 30%),
+    linear-gradient(115deg, #204c40, #43866a);
+}
+.community-profile-content { position: relative; padding: 0 30px 28px; }
+.community-profile-avatar {
+  width: 76px;
+  height: 76px;
+  display: grid;
+  place-items: center;
+  margin-top: -38px;
+  border: 5px solid #fff;
+  border-radius: 50%;
+  color: #2d6a50;
+  background: #e5f2e8;
+  font: 800 22px Manrope;
+}
+.community-profile-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  margin-top: 10px;
+}
+.community-profile-heading h2 { margin: 0; color: #263e35; font: 800 24px Manrope; letter-spacing: -.6px; }
+.community-profile-heading p { margin: 5px 0 0; color: #78877f; font-size: 12px; }
+.community-profile-you { border-radius: 20px; padding: 6px 10px; color: #34765b; background: #edf6ef; font-size: 10px; font-weight: 750; }
+.community-profile-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin: 22px 0;
+}
+.community-profile-stats div { display: flex; flex-direction: column; gap: 3px; padding: 13px; border: 1px solid #e8eee9; border-radius: 10px; background: #fbfcfa; }
+.community-profile-stats strong { color: #2d7254; font: 800 21px Manrope; }
+.community-profile-stats span { color: #829088; font-size: 10px; }
+.community-profile-section { margin-top: 22px; }
+.community-profile-section > .section-kicker { margin-bottom: 11px; }
+.community-profile-activity-list { display: grid; gap: 9px; }
+.community-profile-activity { padding: 13px 14px; border: 1px solid #e8eee9; border-radius: 10px; background: #fcfdfb; }
+.community-profile-activity > span { color: #87958d; font-size: 9px; font-weight: 700; }
+.community-profile-activity h4 { margin: 6px 0 4px; color: #2a4037; font: 750 13px Manrope; }
+.community-profile-activity p { margin: 0; color: #718078; font-size: 11px; line-height: 1.65; white-space: pre-wrap; overflow-wrap: anywhere; }
+.community-profile-muted { color: #8b9790; font-size: 11px; }
+.community-profile-privacy { margin: 25px 0 0; padding-top: 15px; border-top: 1px solid #edf0ed; color: #88968e; font-size: 10px; line-height: 1.6; }
+.community-profile-loading { min-height: 240px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 25px; color: #75867d; font-size: 12px; }
+@media (max-width: 600px) {
+  .community-profile-backdrop { padding: 9px; }
+  .community-profile-content { padding: 0 18px 22px; }
+  .community-profile-cover { height: 118px; }
+  .community-profile-heading { flex-direction: column; }
+  .community-profile-heading h2 { font-size: 20px; }
+  .community-profile-stats { gap: 6px; }
+  .community-profile-stats div { padding: 10px; }
+}
