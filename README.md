@@ -27,14 +27,22 @@ The application maintains student skill profiles, stores internship requirements
 
 ## Features in the current prototype
 
-- Browse internship opportunities
+- Student registration and login with password hashing and private sessions
+- Student-specific profile, academic details, and selected skills
+- Browse internship opportunities and open a full details view
 - Search by role, company, location, and skill
 - Filter by work mode and minimum skill-match percentage
-- View student profiles and skill sets
+- View your own student profile and skill set
 - Compare matched and missing internship skills
 - View ranked recommendations
 - Submit an internship application and view its status when the API is connected
-- Demo preview mode with clearly marked fictional sample data when the API is unavailable
+- Session-protected applications and profile endpoints
+
+## Student accounts and privacy
+
+Students create an account using their name, email, password, department, graduation year, and selected skills. Passwords are stored as BCrypt hashes. The browser receives an HttpOnly session cookie; profile, recommendation, and application endpoints are restricted to the signed-in student. Open internship listings and the skill catalogue remain public.
+
+Demo records in the database are fictional seed data and are not login accounts. Register with your own email to create a personal account.
 
 ## Matching baseline
 
@@ -135,7 +143,7 @@ The root `Dockerfile` builds both frontend and backend into one container. The R
 
 ## Security and data note
 
-The current app is a prototype and does not yet have sign-in, authentication, or role-based authorization. The API currently exposes sample student profiles and accepts application requests without a user login. Use only fictional demo data until authentication, authorization, validation, and production data protections have been added. Never commit database passwords, API tokens, or other secrets.
+This is still a student-project prototype. Student sign-in and per-student access checks are implemented, but email verification, password reset, employer/admin accounts, rate limiting, and full production privacy hardening are not yet implemented. Do not enter sensitive personal data. Never commit database passwords, API tokens, or other secrets.
 
 ## Team
 
@@ -146,4 +154,4 @@ The current app is a prototype and does not yet have sign-in, authentication, or
 
 ## Project status
 
-Prototype implementation in progress. The database schema, backend REST API, initial React interface, and combined production Docker build are in the repository. Authentication and production security hardening are still outstanding.
+Prototype deployed on Railway. Student registration/login, personal profile access, skill-based recommendations, internship details, and application tracking are implemented. Additional production hardening and employer/admin workflows remain future work.
