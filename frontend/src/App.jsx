@@ -842,7 +842,7 @@ function CommunityPage({ student }) {
                     {selectedProfile.data.githubUrl && <a href={selectedProfile.data.githubUrl} target="_blank" rel="noreferrer">GitHub ↗</a>}
                     {selectedProfile.data.portfolioUrl && <a href={selectedProfile.data.portfolioUrl} target="_blank" rel="noreferrer">Portfolio ↗</a>}
                   </div></div>}
-                  {selectedProfile.data.projects && <div className="community-profile-section"><div className="section-kicker">PROJECTS</div><div className="profile-lines">{selectedProfile.data.projects.split("\\n").filter(Boolean).map((line, index) => <div key={index}>{line}</div>)}</div></div>}
+                  {selectedProfile.data.projects && <div className="community-profile-section"><div className="section-kicker">PROJECTS</div><div className="profile-lines">{selectedProfile.data.projects.split(/\r?\n/).filter(Boolean).map((line, index) => <div key={index}>{line}</div>)}</div></div>}
                   {selectedProfile.data.achievements && <div className="community-profile-section"><div className="section-kicker">ACHIEVEMENTS</div><div className="profile-lines">{selectedProfile.data.achievements.split("\\n").filter(Boolean).map((line, index) => <div key={index}>{line}</div>)}</div></div>}
                   <div className="community-profile-section">
                     <div className="section-kicker">SKILLS & EXPERTISE</div>
@@ -889,7 +889,7 @@ function CommunityPage({ student }) {
   );
 }
 
-function NetworkCard({ person, busy, onConnect, onAccept, onIgnore, onRemove, variant }) {
+function NetworkCard({ person, busy, onConnect, onAccept, onIgnore, onRemove, onView, variant }) {
   return (
     <article className="network-card">
       <div className="network-card-top">
@@ -904,6 +904,7 @@ function NetworkCard({ person, busy, onConnect, onAccept, onIgnore, onRemove, va
       </div>
       {person.skills?.length > 0 && <div className="network-card-skills">{person.skills.slice(0, 5).map((skill) => <span key={skill}>{skill}</span>)}{person.skills.length > 5 && <small>+{person.skills.length - 5}</small>}</div>}
       <div className="network-card-actions">
+        <button className="button button-outline network-view-button" type="button" onClick={() => onView(person)}>View profile</button>
         {variant === "incoming" ? <>
           <button className="button button-dark" type="button" disabled={busy} onClick={() => onAccept(person)}>{busy ? "Updating…" : "Accept"}</button>
           <button className="button button-outline" type="button" disabled={busy} onClick={() => onIgnore(person)}>Ignore</button>
@@ -924,6 +925,17 @@ function NetworkPage() {
   const [busyId, setBusyId] = useState(null);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
+  const [selectedProfile, setSelectedProfile] = useState(null);
+
+  async function openProfile(studentId) {
+    setSelectedProfile({ loading: true, data: null, error: "" });
+    try {
+      const data = await api(`/api/community/students/${studentId}`);
+      setSelectedProfile({ loading: false, data, error: "" });
+    } catch (requestError) {
+      setSelectedProfile({ loading: false, data: null, error: requestError.message });
+    }
+  }
 
   async function refresh(searchText = submittedQuery) {
     setLoading(true);
@@ -991,10 +1003,34 @@ function NetworkPage() {
           {loading ? <div className="admin-loading">Loading your student network…</div> : active.items?.length ? <div className="network-grid">
             {active.items.map((person) => <NetworkCard key={person.studentId} person={person} busy={busyId === person.studentId}
               variant={view} onConnect={(item) => runAction(item, "connect")} onAccept={(item) => runAction(item, "accept")}
-              onIgnore={(item) => runAction(item, view === "outgoing" ? "withdraw" : "ignore")} onRemove={(item) => runAction(item, "remove")}/>)}
+              onIgnore={(item) => runAction(item, view === "outgoing" ? "withdraw" : "ignore")} onRemove={(item) => runAction(item, "remove")} onView={(item) => openProfile(item.studentId)}/>)}
           </div> : <div className="network-empty"><span className="network-empty-icon"><Icon name="user" size={23}/></span><h3>Nothing here yet</h3><p>{active.empty}</p></div>}
         </div>
       </div>
+      {selectedProfile && <div className="community-profile-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setSelectedProfile(null); }}>
+        <section className="community-profile-modal" role="dialog" aria-modal="true" aria-label="Student profile">
+          <button className="community-profile-close" type="button" onClick={() => setSelectedProfile(null)} aria-label="Close profile"><Icon name="close" size={18}/></button>
+          {selectedProfile.loading ? <div className="community-profile-loading"><div className="loader"/><p>Loading student profile…</p></div>
+            : selectedProfile.error ? <div className="community-profile-loading"><p>{selectedProfile.error}</p></div>
+            : selectedProfile.data && <>
+              <div className="community-profile-cover" style={selectedProfile.data.coverImageUrl ? { backgroundImage: `url("${selectedProfile.data.coverImageUrl}")` } : undefined}/>
+              <div className="community-profile-content">
+                <div className="community-profile-avatar">{selectedProfile.data.avatarUrl ? <img src={selectedProfile.data.avatarUrl} alt=""/> : initials(selectedProfile.data.fullName)}</div>
+                <div className="community-profile-heading"><div><h2>{selectedProfile.data.fullName}</h2><p>{selectedProfile.data.headline || selectedProfile.data.department || "Student"}</p>{selectedProfile.data.location && <span className="profile-location-line"><Icon name="pin" size={13}/>{selectedProfile.data.location}</span>}</div></div>
+                <div className="community-profile-stats"><div><strong>{selectedProfile.data.connectionCount || 0}</strong><span>Connections</span></div><div><strong>{selectedProfile.data.skills?.length || 0}</strong><span>Skills</span></div><div><strong>{selectedProfile.data.discussionCount || 0}</strong><span>Discussions</span></div><div><strong>{selectedProfile.data.commentCount || 0}</strong><span>Replies</span></div></div>
+                {selectedProfile.data.about && <div className="community-profile-section"><div className="section-kicker">ABOUT</div><p className="community-profile-about">{selectedProfile.data.about}</p></div>}
+                {selectedProfile.data.skills?.length > 0 && <div className="community-profile-section"><div className="section-kicker">SKILLS</div><div className="skill-list">{selectedProfile.data.skills.map((skill) => <span className="skill-chip" key={skill}>{skill}</span>)}</div></div>}
+                {(selectedProfile.data.linkedinUrl || selectedProfile.data.githubUrl || selectedProfile.data.portfolioUrl) && <div className="community-profile-section"><div className="section-kicker">LINKS</div><div className="profile-social-links">
+                  {selectedProfile.data.linkedinUrl && <a href={selectedProfile.data.linkedinUrl} target="_blank" rel="noreferrer">LinkedIn ↗</a>}
+                  {selectedProfile.data.githubUrl && <a href={selectedProfile.data.githubUrl} target="_blank" rel="noreferrer">GitHub ↗</a>}
+                  {selectedProfile.data.portfolioUrl && <a href={selectedProfile.data.portfolioUrl} target="_blank" rel="noreferrer">Portfolio ↗</a>}
+                </div></div>}
+                {selectedProfile.data.projects && <div className="community-profile-section"><div className="section-kicker">PROJECTS</div><div className="profile-lines">{selectedProfile.data.projects.split(/\\r?\\n/).filter(Boolean).map((line, index) => <div key={index}>{line}</div>)}</div></div>}
+                {selectedProfile.data.achievements && <div className="community-profile-section"><div className="section-kicker">ACHIEVEMENTS</div><div className="profile-lines">{selectedProfile.data.achievements.split(/\\r?\\n/).filter(Boolean).map((line, index) => <div key={index}>{line}</div>)}</div></div>}
+              </div>
+            </>}
+        </section>
+      </div>}
     </section>
   );
 }
@@ -1454,7 +1490,7 @@ export default function App() {
                 {currentStudent.githubUrl && <a href={currentStudent.githubUrl} target="_blank" rel="noreferrer">GitHub ↗</a>}
                 {currentStudent.portfolioUrl && <a href={currentStudent.portfolioUrl} target="_blank" rel="noreferrer">Portfolio ↗</a>}
               </div></div>}
-              {currentStudent.projects && <div className="profile-detail-section"><span className="profile-label">PROJECTS</span><div className="profile-lines">{currentStudent.projects.split("\\n").filter(Boolean).map((line, index) => <div key={index}>{line}</div>)}</div></div>}
+              {currentStudent.projects && <div className="profile-detail-section"><span className="profile-label">PROJECTS</span><div className="profile-lines">{currentStudent.projects.split(/\r?\n/).filter(Boolean).map((line, index) => <div key={index}>{line}</div>)}</div></div>}
               {currentStudent.achievements && <div className="profile-detail-section"><span className="profile-label">ACHIEVEMENTS</span><div className="profile-lines">{currentStudent.achievements.split("\\n").filter(Boolean).map((line, index) => <div key={index}>{line}</div>)}</div></div>}
               <p className="profile-footnote">Your academic details, skills and portfolio help other students understand your interests. Your email and saved internships remain private.</p>
             </div>

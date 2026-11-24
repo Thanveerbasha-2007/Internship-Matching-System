@@ -924,3 +924,6 @@ a { color: inherit; text-decoration: none; }
   .community-profile-connect { justify-content: flex-start; }
   .community-profile-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
+
+.network-card-actions .network-view-button { flex: 0 0 auto; }
+@media (max-width: 560px) { .network-card-actions { flex-wrap: wrap; } .network-card-actions .network-view-button { flex-basis: 100%; } }
