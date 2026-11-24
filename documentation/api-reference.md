@@ -177,6 +177,78 @@ Requires a signed-in student. The `studentId` in the request must match the sess
 
 Requires the matching student's session. Returns the applications submitted by that student.
 
+## Student community
+
+All community endpoints require a signed-in student session. The feed shows student names and departments as authors; email addresses are not included in community responses.
+
+### `GET /api/community/posts`
+
+Returns visible discussions. Optional query parameters:
+
+- `sort`: `NEWEST` (default) or `TOP`.
+- `category`: `ALL` (default), `INTERNSHIP_QUESTIONS`, `EXPERIENCES`, `INTERVIEW_PREP`, `CAREER_ADVICE`, `STUDENT_LIFE`, or `GENERAL`.
+- `q`: searches post title, body, and author's name.
+
+Each post response includes author details, category, title, body, creation/update timestamps, upvote count, comment count, and whether the current student has upvoted it.
+
+### `GET /api/community/posts/{postId}`
+
+Returns one visible discussion.
+
+### `POST /api/community/posts`
+
+Creates a discussion for the signed-in student.
+
+```json
+{
+  "category": "INTERNSHIP_QUESTIONS",
+  "title": "How should I prepare for a backend internship?",
+  "body": "I know Java and SQL. Which topics should I practise before applying?"
+}
+```
+
+Allowed categories: `INTERNSHIP_QUESTIONS`, `EXPERIENCES`, `INTERVIEW_PREP`, `CAREER_ADVICE`, `STUDENT_LIFE`, and `GENERAL`. Titles are limited to 180 characters and post bodies to 10,000 characters.
+
+### `PUT /api/community/posts/{postId}`
+
+Edits the category, title, and body of the signed-in student's own discussion. Editing another student's post returns `403 Forbidden`.
+
+### `DELETE /api/community/posts/{postId}`
+
+Soft-deletes the signed-in student's own discussion from the visible feed. Its discussion comments and votes are retained in the database as associated records until the post's database row is removed.
+
+### `POST /api/community/posts/{postId}/upvote`
+
+Adds the current student's upvote. Repeated requests do not create duplicate votes.
+
+### `DELETE /api/community/posts/{postId}/upvote`
+
+Removes the current student's upvote.
+
+### `GET /api/community/posts/{postId}/comments`
+
+Returns the comments for a visible discussion, ordered oldest first.
+
+### `POST /api/community/posts/{postId}/comments`
+
+Adds a comment to a discussion.
+
+```json
+{
+  "body": "Start with REST APIs, SQL, and one deployed project."
+}
+```
+
+Comment bodies are limited to 4,000 characters.
+
+### `DELETE /api/community/comments/{commentId}`
+
+Deletes a comment authored by the signed-in student. Deleting another student's comment returns `403 Forbidden`.
+
+### `POST /api/community/posts/{postId}/report`
+
+Records one report per student per post. The accepted reasons are `SPAM`, `HARASSMENT`, `MISINFORMATION`, `INAPPROPRIATE`, and `OTHER`; optional details are limited to 500 characters. Reports are stored for future moderation review; the current prototype does not include a moderator dashboard.
+
 ## Common errors
 
 - `400 Bad Request`: validation failed or the internship is not accepting applications.
