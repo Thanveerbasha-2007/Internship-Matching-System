@@ -239,7 +239,7 @@ public class CommunityService {
                    (SELECT COUNT(*) FROM community_posts p
                     WHERE p.author_student_id = s.student_id AND p.status = 'VISIBLE') AS discussion_count,
                    (SELECT COUNT(*) FROM community_comments c
-                    WHERE c.author_student_id = s.student_id) AS comment_count
+                    WHERE c.author_student_id = s.student_id AND EXISTS (\n                      SELECT 1 FROM community_posts visible_post\n                      WHERE visible_post.post_id = c.post_id AND visible_post.status = 'VISIBLE'\n                    )) AS comment_count
             FROM students s
             WHERE s.student_id = ?
             """,
@@ -289,6 +289,7 @@ public class CommunityService {
     private List<CommunityPostResponse> findStudentPosts(Long studentId, Long viewerId, boolean experiencesOnly) {
         StringBuilder sql = new StringBuilder(POST_SELECT)
             .append(" WHERE p.status = 'VISIBLE' AND p.author_student_id = ?");
+        if (!experiencesOnly) {\n            sql.append(" AND p.category <> 'EXPERIENCES'");\n        }
         if (experiencesOnly) {
             sql.append(" AND p.category = 'EXPERIENCES'");
         }
@@ -297,7 +298,9 @@ public class CommunityService {
         return jdbc.query(sql.toString(), this::mapPost, viewerId, studentId);
     }
 
-    private record CommunityStudentProfileBase(Long studentId, String fullName, String department, Integer graduationYear, Long discussionCount, Long commentCount) {}\n\n    private CommunityCommentResponse findComment(Long commentId) {
+    private record CommunityStudentProfileBase(Long studentId, String fullName, String department, Integer graduationYear, Long discussionCount, Long commentCount) {}
+
+    private CommunityCommentResponse findComment(Long commentId) {
         List<CommunityCommentResponse> comments = jdbc.query(
             """
             SELECT c.comment_id, c.post_id, c.author_student_id, s.full_name,
