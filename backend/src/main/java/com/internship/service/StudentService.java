@@ -117,6 +117,42 @@ public class StudentService {
         return findById(studentId);
     }
 
+    @Transactional
+    public StudentResponse updateProfile(Long studentId, com.internship.dto.StudentUpdateRequest request) {
+        findById(studentId);
+        Set<Long> skillIds = request.skillIds() == null
+            ? Set.of()
+            : new LinkedHashSet<>(request.skillIds());
+
+        for (Long skillId : skillIds) {
+            Integer exists = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM skills WHERE skill_id = ?",
+                Integer.class,
+                skillId
+            );
+            if (exists == null || exists == 0) {
+                throw new IllegalArgumentException("Unknown skill ID: " + skillId);
+            }
+        }
+
+        jdbcTemplate.update(
+            "UPDATE students SET full_name = ?, department = ?, graduation_year = ? WHERE student_id = ?",
+            request.fullName().trim(),
+            request.department(),
+            request.graduationYear(),
+            studentId
+        );
+        jdbcTemplate.update("DELETE FROM student_skills WHERE student_id = ?", studentId);
+        for (Long skillId : skillIds) {
+            jdbcTemplate.update(
+                "INSERT INTO student_skills (student_id, skill_id) VALUES (?, ?)",
+                studentId,
+                skillId
+            );
+        }
+        return findById(studentId);
+    }
+
     private StudentResponse withSkills(StudentBase student) {
         List<String> skills = jdbcTemplate.query(
             """
