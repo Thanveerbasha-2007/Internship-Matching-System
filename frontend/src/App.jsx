@@ -889,7 +889,7 @@ function CommunityPage({ student }) {
   );
 }
 
-function NetworkCard({ person, busy, onConnect, onAccept, onIgnore, onRemove, onView, variant }) {
+function NetworkCard({ person, busy, onConnect, onAccept, onIgnore, onRemove, onToggleFollow, onView, variant }) {
   return (
     <article className="network-card">
       <div className="network-card-top">
@@ -905,6 +905,7 @@ function NetworkCard({ person, busy, onConnect, onAccept, onIgnore, onRemove, on
       {person.skills?.length > 0 && <div className="network-card-skills">{person.skills.slice(0, 5).map((skill) => <span key={skill}>{skill}</span>)}{person.skills.length > 5 && <small>+{person.skills.length - 5}</small>}</div>}
       <div className="network-card-actions">
         <button className="button button-outline network-view-button" type="button" onClick={() => onView(person)}>View profile</button>
+        <button className={person.followedByMe ? "button button-outline network-follow-button is-following" : "button button-outline network-follow-button"} type="button" disabled={busy} onClick={() => onToggleFollow(person)}>{busy ? "Updating…" : person.followedByMe ? "Following" : "Follow"}</button>
         {variant === "incoming" ? <>
           <button className="button button-dark" type="button" disabled={busy} onClick={() => onAccept(person)}>{busy ? "Updating…" : "Accept"}</button>
           <button className="button button-outline" type="button" disabled={busy} onClick={() => onIgnore(person)}>Ignore</button>
@@ -960,12 +961,20 @@ function NetworkPage() {
     setNotice("");
     let path = `/api/network/${person.studentId}/request`;
     let method = "POST";
+    if (action === "follow" || action === "unfollow") {
+      path = `/api/network/${person.studentId}/follow`;
+      method = action === "follow" ? "POST" : "DELETE";
+    }
     if (action === "accept") { path = `/api/network/requests/${person.studentId}/accept`; method = "PATCH"; }
     if (action === "ignore" || action === "withdraw") { path = `/api/network/requests/${person.studentId}`; method = "DELETE"; }
     if (action === "remove") { path = `/api/network/connections/${person.studentId}`; method = "DELETE"; }
     try {
       await api(path, { method });
-      setNotice(action === "accept" ? "Connection request accepted." : action === "connect" ? "Connection request sent." : action === "remove" ? "Connection removed." : "Connection request updated.");
+      setNotice(action === "follow" ? "You are now following this student." : action === "unfollow" ? "You unfollowed this student." : action === "accept" ? "Connection request accepted." : action === "connect" ? "Connection request sent." : action === "remove" ? "Connection removed." : "Connection request updated.");
+      if ((action === "follow" || action === "unfollow") && selectedProfile?.data?.studentId === person.studentId) {
+        const updatedProfile = await api(`/api/community/students/${person.studentId}`);
+        setSelectedProfile({ loading: false, data: updatedProfile, error: "" });
+      }
       await refresh(submittedQuery);
     } catch (requestError) {
       setError(requestError.message || "Could not update this connection.");
@@ -1003,7 +1012,8 @@ function NetworkPage() {
           {loading ? <div className="admin-loading">Loading your student network…</div> : active.items?.length ? <div className="network-grid">
             {active.items.map((person) => <NetworkCard key={person.studentId} person={person} busy={busyId === person.studentId}
               variant={view} onConnect={(item) => runAction(item, "connect")} onAccept={(item) => runAction(item, "accept")}
-              onIgnore={(item) => runAction(item, view === "outgoing" ? "withdraw" : "ignore")} onRemove={(item) => runAction(item, "remove")} onView={(item) => openProfile(item.studentId)}/>)}
+              onIgnore={(item) => runAction(item, view === "outgoing" ? "withdraw" : "ignore")} onRemove={(item) => runAction(item, "remove")}
+              onToggleFollow={(item) => runAction(item, item.followedByMe ? "unfollow" : "follow")} onView={(item) => openProfile(item.studentId)}/>)}
           </div> : <div className="network-empty"><span className="network-empty-icon"><Icon name="user" size={23}/></span><h3>Nothing here yet</h3><p>{active.empty}</p></div>}
         </div>
       </div>
@@ -1016,8 +1026,10 @@ function NetworkPage() {
               <div className="community-profile-cover" style={selectedProfile.data.coverImageUrl ? { backgroundImage: `url("${selectedProfile.data.coverImageUrl}")` } : undefined}/>
               <div className="community-profile-content">
                 <div className="community-profile-avatar">{selectedProfile.data.avatarUrl ? <img src={selectedProfile.data.avatarUrl} alt=""/> : initials(selectedProfile.data.fullName)}</div>
-                <div className="community-profile-heading"><div><h2>{selectedProfile.data.fullName}</h2><p>{selectedProfile.data.headline || selectedProfile.data.department || "Student"}</p>{selectedProfile.data.location && <span className="profile-location-line"><Icon name="pin" size={13}/>{selectedProfile.data.location}</span>}</div></div>
-                <div className="community-profile-stats"><div><strong>{selectedProfile.data.connectionCount || 0}</strong><span>Connections</span></div><div><strong>{selectedProfile.data.skills?.length || 0}</strong><span>Skills</span></div><div><strong>{selectedProfile.data.discussionCount || 0}</strong><span>Discussions</span></div><div><strong>{selectedProfile.data.commentCount || 0}</strong><span>Replies</span></div></div>
+                <div className="community-profile-heading"><div><h2>{selectedProfile.data.fullName}</h2><p>{selectedProfile.data.headline || selectedProfile.data.department || "Student"}</p>{selectedProfile.data.location && <span className="profile-location-line"><Icon name="pin" size={13}/>{selectedProfile.data.location}</span>}</div>
+                  <div className="community-profile-connect"><button className={selectedProfile.data.followedByMe ? "button button-outline" : "button button-dark"} type="button" disabled={busyId === selectedProfile.data.studentId} onClick={() => runAction({ studentId: selectedProfile.data.studentId, followedByMe: selectedProfile.data.followedByMe }, selectedProfile.data.followedByMe ? "unfollow" : "follow")}>{busyId === selectedProfile.data.studentId ? "Updating…" : selectedProfile.data.followedByMe ? "Following" : "Follow"}</button></div>
+                </div>
+                <div className="community-profile-stats"><div><strong>{selectedProfile.data.connectionCount || 0}</strong><span>Connections</span></div><div><strong>{selectedProfile.data.followerCount || 0}</strong><span>Followers</span></div><div><strong>{selectedProfile.data.skills?.length || 0}</strong><span>Skills</span></div><div><strong>{selectedProfile.data.discussionCount || 0}</strong><span>Discussions</span></div><div><strong>{selectedProfile.data.commentCount || 0}</strong><span>Replies</span></div></div>
                 {selectedProfile.data.about && <div className="community-profile-section"><div className="section-kicker">ABOUT</div><p className="community-profile-about">{selectedProfile.data.about}</p></div>}
                 {selectedProfile.data.skills?.length > 0 && <div className="community-profile-section"><div className="section-kicker">SKILLS</div><div className="skill-list">{selectedProfile.data.skills.map((skill) => <span className="skill-chip" key={skill}>{skill}</span>)}</div></div>}
                 {(selectedProfile.data.linkedinUrl || selectedProfile.data.githubUrl || selectedProfile.data.portfolioUrl) && <div className="community-profile-section"><div className="section-kicker">LINKS</div><div className="profile-social-links">
