@@ -1,7 +1,7 @@
 package com.internship.service;
 
 import com.internship.dto.CommunityCommentResponse;
-import com.internship.dto.CommunityPostResponse;
+import com.internship.dto.CommunityPostResponse;\nimport com.internship.dto.CommunityStudentProfileResponse;
 import com.internship.dto.CreateCommunityCommentRequest;
 import com.internship.dto.CreateCommunityPostRequest;
 import com.internship.dto.ReportCommunityPostRequest;
@@ -231,7 +231,72 @@ public class CommunityService {
         );
     }
 
-    private CommunityCommentResponse findComment(Long commentId) {
+    public CommunityStudentProfileResponse findStudentProfile(Long studentId, Long viewerId) {
+        List<CommunityStudentProfileBase> profiles = jdbc.query(
+            """
+            SELECT s.student_id, s.full_name, s.department, s.graduation_year,
+                   (SELECT COUNT(*) FROM community_posts p
+                    WHERE p.author_student_id = s.student_id AND p.status = 'VISIBLE') AS discussion_count,
+                   (SELECT COUNT(*) FROM community_comments c
+                    WHERE c.author_student_id = s.student_id) AS comment_count
+            FROM students s
+            WHERE s.student_id = ?
+            """,
+            (rs, rowNum) -> new CommunityStudentProfileBase(
+                rs.getLong("student_id"),
+                rs.getString("full_name"),
+                rs.getString("department"),
+                (Integer) rs.getObject("graduation_year"),
+                rs.getLong("discussion_count"),
+                rs.getLong("comment_count")
+            ),
+            studentId
+        );
+        if (profiles.isEmpty()) {
+            throw new NotFoundException("Student " + studentId + " was not found.");
+        }
+
+        CommunityStudentProfileBase profile = profiles.get(0);
+        List<String> skills = jdbc.query(
+            """
+            SELECT s.skill_name
+            FROM student_skills ss
+            JOIN skills s ON s.skill_id = ss.skill_id
+            WHERE ss.student_id = ?
+            ORDER BY s.skill_name
+            """,
+            (rs, rowNum) -> rs.getString("skill_name"),
+            studentId
+        );
+
+        List<CommunityPostResponse> recentDiscussions = findStudentPosts(studentId, viewerId, false);
+        List<CommunityPostResponse> experiencePosts = findStudentPosts(studentId, viewerId, true);
+
+        return new CommunityStudentProfileResponse(
+            profile.studentId(),
+            profile.fullName(),
+            profile.department(),
+            profile.graduationYear(),
+            skills,
+            profile.discussionCount(),
+            profile.commentCount(),
+            recentDiscussions,
+            experiencePosts
+        );
+    }
+
+    private List<CommunityPostResponse> findStudentPosts(Long studentId, Long viewerId, boolean experiencesOnly) {
+        StringBuilder sql = new StringBuilder(POST_SELECT)
+            .append(" WHERE p.status = 'VISIBLE' AND p.author_student_id = ?");
+        if (experiencesOnly) {
+            sql.append(" AND p.category = 'EXPERIENCES'");
+        }
+        sql.append(" ORDER BY p.created_at DESC, p.post_id DESC LIMIT ")
+            .append(experiencesOnly ? "5" : "10");
+        return jdbc.query(sql.toString(), this::mapPost, viewerId, studentId);
+    }
+
+    private record CommunityStudentProfileBase(Long studentId, String fullName, String department, Integer graduationYear, Long discussionCount, Long commentCount) {}\n\n    private CommunityCommentResponse findComment(Long commentId) {
         List<CommunityCommentResponse> comments = jdbc.query(
             """
             SELECT c.comment_id, c.post_id, c.author_student_id, s.full_name,
