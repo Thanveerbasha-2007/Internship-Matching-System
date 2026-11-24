@@ -6,5 +6,5 @@ public record CommunityStudentProfileResponse(
     List<CommunityPostResponse> experiencePosts,
     String headline, String about, String location, String avatarUrl, String coverImageUrl,
     String linkedinUrl, String githubUrl, String portfolioUrl, String projects, String achievements,
-    Long connectionCount, String connectionStatus
+    Long connectionCount, String connectionStatus, Long followerCount, boolean followedByMe
 ) {}
