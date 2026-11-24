@@ -99,6 +99,22 @@ CREATE TABLE IF NOT EXISTS internship_skills (
   DEFAULT CHARSET=utf8mb4
   COLLATE=utf8mb4_unicode_ci;
 
+CREATE TABLE IF NOT EXISTS saved_internships (
+  student_id BIGINT UNSIGNED NOT NULL,
+  internship_id BIGINT UNSIGNED NOT NULL,
+  saved_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (student_id, internship_id),
+  KEY idx_saved_internships_internship_id (internship_id),
+  CONSTRAINT fk_saved_internships_student
+    FOREIGN KEY (student_id) REFERENCES students (student_id)
+    ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT fk_saved_internships_internship
+    FOREIGN KEY (internship_id) REFERENCES internships (internship_id)
+    ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB
+  DEFAULT CHARSET=utf8mb4
+  COLLATE=utf8mb4_unicode_ci;
+
 CREATE TABLE IF NOT EXISTS applications (
   application_id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
   student_id BIGINT UNSIGNED NOT NULL,
