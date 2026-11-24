@@ -29,15 +29,17 @@ The application maintains student skill profiles, stores internship requirements
 
 - Student registration and login with BCrypt password hashing and private sessions
 - Google sign-in with server-verified Google ID tokens and verified-email account linking
-- Student-specific profile, academic details, and selected skills
+- Student-specific profile, academic details, editable skills, and saved internship shortlist
 - Browse internship opportunities and open a full details view
 - Search by role, company, location, and skill
-- Filter by work mode and minimum skill-match percentage
-- View your own student profile and skill set
-- Compare matched and missing internship skills
-- View ranked recommendations
-- Submit an internship application and view its status when the API is connected
-- Session-protected applications and profile endpoints
+- Filter by work mode, match percentage, stipend, and duration
+- Sort opportunities by match score, stipend, deadline, or duration
+- Save and unsave internships to a persistent student shortlist
+- View a career insights dashboard showing common missing skills across open roles
+- Edit your profile, academic details, and skill set
+- Compare matched and missing internship skills and view ranked recommendations
+- Submit applications and filter the application tracker by status
+- Session-protected profile, saved-internship, recommendation, and application endpoints
 
 ## Student accounts and privacy
 
@@ -158,4 +160,4 @@ This is still a student-project prototype. Student sign-in and per-student acces
 
 ## Project status
 
-Prototype deployed on Railway. Student registration/login, personal profile access, skill-based recommendations, internship details, and application tracking are implemented. Additional production hardening and employer/admin workflows remain future work.
+Prototype deployed on Railway. Student registration/login, personal profile editing, persistent saved internships, skill-based recommendations and gap insights, advanced opportunity discovery, internship details, and application tracking are implemented. Additional production hardening and employer/admin workflows remain future work.
