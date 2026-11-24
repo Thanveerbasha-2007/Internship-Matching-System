@@ -15,7 +15,7 @@ Public demo URL: https://internship-api-production-5a538a6f.up.railway.app
 
 The MySQL service is named `MySQL`. It uses a persistent volume mounted at `/var/lib/mysql`. Keep this service private; the backend connects using Railway's private network variables.
 
-The Spring Boot service is named `internship-api`, uses the repository `Thanveerbasha-2007/Internship-Matching-System` on `main`, and builds from the repository root using the root `Dockerfile`.
+The Spring Boot service is named `internship-api`, uses the repository `Thanveerbasha-2007/Internship-Matching-System` on `main`, and builds from the repository root using the root `Dockerfile`. In Railway, keep **Root Directory** empty (the repository root) and set the Dockerfile path to `/Dockerfile`; do not enter the repository URL in Root Directory.
 
 ## Required backend variables
 
