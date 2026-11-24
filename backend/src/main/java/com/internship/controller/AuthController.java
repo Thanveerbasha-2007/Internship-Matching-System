@@ -1,5 +1,6 @@
 package com.internship.controller;
 
+import com.internship.dto.GoogleLoginRequest;
 import com.internship.dto.LoginRequest;
 import com.internship.dto.RegisterRequest;
 import com.internship.dto.StudentResponse;
@@ -33,6 +34,17 @@ public class AuthController {
     public StudentResponse login(@Valid @RequestBody LoginRequest request, HttpServletRequest servletRequest) {
         replaceSession(servletRequest);
         return auth.login(request, servletRequest.getSession(true));
+    }
+
+    @PostMapping("/google")
+    public StudentResponse google(@Valid @RequestBody GoogleLoginRequest request, HttpServletRequest servletRequest) {
+        replaceSession(servletRequest);
+        return auth.loginWithGoogle(request.credential(), servletRequest.getSession(true));
+    }
+
+    @GetMapping("/config")
+    public Map<String, String> config() {
+        return Map.of("googleClientId", auth.googleClientId());
     }
 
     @GetMapping("/me")
