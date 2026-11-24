@@ -69,10 +69,11 @@ function AuthPanel({ skills, mode, setMode, onSubmit, onGoogleCredential, google
   const [showPassword, setShowPassword] = useState(false);
   const googleButtonRef = useRef(null);
   const googleCallbackRef = useRef(onGoogleCredential);
-
-  useEffect(() => {
-    googleCallbackRef.current = onGoogleCredential;
-  }, [onGoogleCredential]);
+  googleCallbackRef.current = (credential) => onGoogleCredential(credential, mode === "register" ? {
+    department: department.trim(),
+    graduationYear: graduationYear ? Number(graduationYear) : null,
+    skillIds,
+  } : {});
 
   useEffect(() => {
     if (!googleClientId || !googleButtonRef.current) return undefined;
@@ -370,13 +371,13 @@ export default function App() {
     }
   }
 
-  async function handleGoogleCredential(credential) {
+  async function handleGoogleCredential(credential, profileDetails = {}) {
     setAuthBusy(true);
     setAuthError("");
     try {
       const student = await api("/api/auth/google", {
         method: "POST",
-        body: JSON.stringify({ credential }),
+        body: JSON.stringify({ credential, ...profileDetails }),
       });
       setCurrentStudent(student);
       setApplications([]);
