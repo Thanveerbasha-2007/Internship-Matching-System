@@ -25,9 +25,14 @@ The system is intended to maintain student skill profiles, store internship requ
 └── README.md
 ```
 
-## Technology stack
+## Confirmed technology stack
 
-The implementation stack is to be finalized by the team. React, Java/Spring Boot, and MySQL are currently under consideration; these are planned options, not claims about completed implementation.
+- Frontend: React.js
+- Backend: Java with Spring Boot
+- Database: MySQL
+- Frontend-backend communication: REST APIs
+
+The stack is finalized for the project. Detailed versions, dependencies, and setup instructions will be documented when the applications are initialized.
 
 ## Getting started
 
