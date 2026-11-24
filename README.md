@@ -39,7 +39,7 @@ The application maintains student skill profiles, stores internship requirements
 - Edit your profile, academic details, and skill set
 - Compare matched and missing internship skills and view ranked recommendations
 - Submit applications and filter the application tracker by status
-- Student community for internship questions, experience sharing, interview preparation, career advice, and student-life discussions
+- Student community for internship questions, experience sharing, interview preparation, career advice, and student-life discussions\n- Community student profiles with skills, academic details, experience posts, recent discussion history, and activity counts
 - Create and edit discussions, comment, upvote, and report posts; students can delete their own posts and comments
 - Session-protected profile, saved-internship, recommendation, application, and community endpoints
 
@@ -52,6 +52,10 @@ Demo records in the database are fictional seed data and are not login accounts.
 ## Student community
 
 The signed-in student community lets students ask internship questions, share internship experiences, discuss interview preparation, exchange career advice, and post about student life. Students can create and edit their own discussions, upvote posts, comment, delete their own comments, and report posts. The feed can be searched, filtered by category, and sorted by newest or top-voted. Reports are recorded in the database for review; a dedicated moderator/admin review dashboard is not part of this prototype yet. Keep personal contact details and confidential material out of public posts.
+
+## Community student profiles
+
+Selecting a student's name in a community post or comment opens their profile. The profile shows their department, graduation year, selected skills, visible experience posts, recent discussion history, and community activity counts. Email addresses, saved internships, applications, and other private account data are not exposed through this community profile view. Only visible community posts are included.
 
 ## Matching baseline
 
