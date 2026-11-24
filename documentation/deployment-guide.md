@@ -11,6 +11,8 @@ The root `Dockerfile` builds the React app first, copies its `dist` files into S
 
 The Railway project is named **Internship Matching System** and has a `production` environment.
 
+Public demo URL: https://internship-api-production-5a538a6f.up.railway.app
+
 The MySQL service is named `MySQL`. It uses a persistent volume mounted at `/var/lib/mysql`. Keep this service private; the backend connects using Railway's private network variables.
 
 The Spring Boot service is named `internship-api`, uses the repository `Thanveerbasha-2007/Internship-Matching-System` on `main`, and builds from the repository root using the root `Dockerfile`.
