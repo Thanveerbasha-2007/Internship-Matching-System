@@ -2,11 +2,13 @@ package com.internship.controller;
 
 import com.internship.dto.RecommendationResponse;
 import com.internship.dto.StudentResponse;
+import com.internship.dto.StudentUpdateRequest;
 import com.internship.service.InternshipService;
 import com.internship.service.SavedInternshipService;
 import com.internship.service.StudentService;
 import jakarta.servlet.http.HttpSession;
 import org.springframework.web.bind.annotation.*;
+import jakarta.validation.Valid;
 
 import java.util.List;
 import java.util.Map;
@@ -35,6 +37,11 @@ public class StudentController {
     @GetMapping("/{id}")
     public StudentResponse one(@PathVariable Long id) {
         return students.findById(id);
+    }
+
+    @PutMapping("/{id}")
+    public StudentResponse update(@PathVariable Long id, @Valid @RequestBody StudentUpdateRequest request) {
+        return students.updateProfile(id, request);
     }
 
     @GetMapping("/{id}/saved-internships")
