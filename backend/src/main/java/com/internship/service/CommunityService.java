@@ -236,14 +236,17 @@ public class CommunityService {
         List<CommunityStudentProfileBase> profiles = jdbc.query(
             """
             SELECT s.student_id, s.full_name, s.department, s.graduation_year,
-                   (SELECT COUNT(*) FROM community_posts p
-                    WHERE p.author_student_id = s.student_id AND p.status = 'VISIBLE') AS discussion_count,
+                   p.headline, p.about, p.location, p.avatar_url, p.cover_image_url,
+                   p.linkedin_url, p.github_url, p.portfolio_url, p.projects, p.achievements,
+                   (SELECT COUNT(*) FROM community_posts posts
+                    WHERE posts.author_student_id = s.student_id AND posts.status = 'VISIBLE') AS discussion_count,
                    (SELECT COUNT(*) FROM community_comments c
                     WHERE c.author_student_id = s.student_id AND EXISTS (
                       SELECT 1 FROM community_posts visible_post
                       WHERE visible_post.post_id = c.post_id AND visible_post.status = 'VISIBLE'
                     )) AS comment_count
             FROM students s
+            LEFT JOIN student_profiles p ON p.student_id = s.student_id
             WHERE s.student_id = ?
             """,
             (rs, rowNum) -> new CommunityStudentProfileBase(
@@ -251,6 +254,16 @@ public class CommunityService {
                 rs.getString("full_name"),
                 rs.getString("department"),
                 (Integer) rs.getObject("graduation_year"),
+                rs.getString("headline"),
+                rs.getString("about"),
+                rs.getString("location"),
+                rs.getString("avatar_url"),
+                rs.getString("cover_image_url"),
+                rs.getString("linkedin_url"),
+                rs.getString("github_url"),
+                rs.getString("portfolio_url"),
+                rs.getString("projects"),
+                rs.getString("achievements"),
                 rs.getLong("discussion_count"),
                 rs.getLong("comment_count")
             ),
@@ -285,7 +298,28 @@ public class CommunityService {
             profile.discussionCount(),
             profile.commentCount(),
             recentDiscussions,
-            experiencePosts
+            experiencePosts,
+            profile.headline(),
+            profile.about(),
+            profile.location(),
+            profile.avatarUrl(),
+            profile.coverImageUrl(),
+            profile.linkedinUrl(),
+            profile.githubUrl(),
+            profile.portfolioUrl(),
+            profile.projects(),
+            profile.achievements(),
+            jdbc.queryForObject(
+                """
+                SELECT COUNT(*) FROM student_connections
+                WHERE status = 'ACCEPTED'
+                  AND (requester_student_id = ? OR recipient_student_id = ?)
+                """,
+                Long.class,
+                studentId,
+                studentId
+            ),
+            relationshipStatus(viewerId, studentId)
         );
     }
 
@@ -303,7 +337,30 @@ public class CommunityService {
         return jdbc.query(sql.toString(), this::mapPost, viewerId, studentId);
     }
 
-    private record CommunityStudentProfileBase(Long studentId, String fullName, String department, Integer graduationYear, Long discussionCount, Long commentCount) {}
+    private String relationshipStatus(Long viewerId, Long profileId) {
+        if (viewerId.equals(profileId)) return "SELF";
+        List<String> statuses = jdbc.query(
+            """
+            SELECT requester_student_id, status
+            FROM student_connections
+            WHERE (requester_student_id = ? AND recipient_student_id = ?)
+               OR (requester_student_id = ? AND recipient_student_id = ?)
+            """,
+            (rs, rowNum) -> {
+                if ("ACCEPTED".equals(rs.getString("status"))) return "CONNECTED";
+                return rs.getLong("requester_student_id") == viewerId ? "OUTGOING_PENDING" : "INCOMING_PENDING";
+            },
+            viewerId, profileId, profileId, viewerId
+        );
+        return statuses.isEmpty() ? "NONE" : statuses.get(0);
+    }
+
+    private record CommunityStudentProfileBase(
+        Long studentId, String fullName, String department, Integer graduationYear,
+        String headline, String about, String location, String avatarUrl, String coverImageUrl,
+        String linkedinUrl, String githubUrl, String portfolioUrl, String projects, String achievements,
+        Long discussionCount, Long commentCount
+    ) {}
 
     private CommunityCommentResponse findComment(Long commentId) {
         List<CommunityCommentResponse> comments = jdbc.query(

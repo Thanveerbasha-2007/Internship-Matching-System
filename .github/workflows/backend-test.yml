@@ -139,7 +139,41 @@ jobs:
             --request POST http://127.0.0.1:8080/api/auth/register \
             --header "Content-Type: application/json" \
             --data '{"fullName":"Regular Student","email":"regular-student@example.com","password":"StudentPass!234","department":"Computer Science","graduationYear":2027,"skillIds":[1]}')
+          echo "Regular student registration HTTP status: $regular_student_status"
+          cat /tmp/regular-student.json
           test "$regular_student_status" = "201"
+          regular_student_id=$(jq -r '.studentId' /tmp/regular-student.json)
+          echo "Registered regular student ID: $regular_student_id"
+          regular_me_status=$(curl --silent --cookie /tmp/regular-student.cookies --output /tmp/regular-student-me.json --write-out "%{http_code}" http://127.0.0.1:8080/api/auth/me)
+          echo "Recipient session verification HTTP status: $regular_me_status"
+          cat /tmp/regular-student-me.json
+          test "$regular_me_status" = "200"
+          student_network_login_status=$(curl --silent --cookie-jar /tmp/student-network.cookies --output /tmp/student-network-login.json --write-out "%{http_code}" \
+            --request POST http://127.0.0.1:8080/api/auth/login \
+            --header "Content-Type: application/json" \
+            --data '{"email":"test-student@example.com","password":"StudentPass!234"}')
+          test "$student_network_login_status" = "200"
+          sender_me_status=$(curl --silent --cookie /tmp/student-network.cookies --output /tmp/student-network-me.json --write-out "%{http_code}" http://127.0.0.1:8080/api/auth/me)
+          echo "Sender session verification HTTP status: $sender_me_status"
+          cat /tmp/student-network-me.json
+          test "$sender_me_status" = "200"
+          network_get_status=$(curl --silent --cookie /tmp/student-network.cookies --output /tmp/network-overview-before.json --write-out "%{http_code}" http://127.0.0.1:8080/api/network)
+          echo "Network overview HTTP status before request: $network_get_status"
+          cat /tmp/network-overview-before.json
+          test "$network_get_status" = "200"
+          request_status=$(curl --silent --cookie /tmp/student-network.cookies --output /tmp/connection-request.json --write-out "%{http_code}" \
+            --request POST "http://127.0.0.1:8080/api/network/$regular_student_id/request")
+          echo "Connection request HTTP status: $request_status"
+          cat /tmp/connection-request.json
+          test "$request_status" = "201"
+          jq -e '.relationshipStatus == "OUTGOING_PENDING"' /tmp/connection-request.json
+          curl --fail --silent --cookie /tmp/regular-student.cookies http://127.0.0.1:8080/api/network | jq -e '(.incomingRequests | length) == 1'
+          accept_status=$(curl --silent --cookie /tmp/regular-student.cookies --output /tmp/connection-accepted.json --write-out "%{http_code}" \
+            --request PATCH "http://127.0.0.1:8080/api/network/requests/$student_id/accept")
+          test "$accept_status" = "200"
+          jq -e '.relationshipStatus == "CONNECTED"' /tmp/connection-accepted.json
+          curl --fail --silent --cookie /tmp/student-network.cookies http://127.0.0.1:8080/api/network | jq -e '.connectionCount == 1 and (.connections | length) == 1'
+
           regular_admin_status=$(curl --silent --cookie /tmp/regular-student.cookies --output /tmp/regular-admin.json --write-out "%{http_code}" http://127.0.0.1:8080/api/admin/overview)
           test "$regular_admin_status" = "403"
 
@@ -172,7 +206,7 @@ jobs:
           update_status=$(curl --silent --cookie /tmp/student.cookies --output /tmp/profile-updated.json --write-out "%{http_code}" \
             --request PUT "http://127.0.0.1:8080/api/students/$student_id" \
             --header "Content-Type: application/json" \
-            --data '{"fullName":"Test Student Updated","department":"CSAI","graduationYear":2028,"skillIds":[1,2]}')
+            --data '{"fullName":"Test Student Updated","department":"CSAI","graduationYear":2028,"skillIds":[1,2],"headline":"CSAI student | Java & React","about":"Building full-stack projects and learning backend engineering.","location":"Lucknow, India","linkedinUrl":"https://www.linkedin.com/in/test-student","githubUrl":"https://github.com/test-student","portfolioUrl":"https://test-student.dev","projects":"InternMatch | Internship matching platform","achievements":"Completed a deployed full-stack project"}')
           test "$update_status" = "200"
           grep -q "Test Student Updated" /tmp/profile-updated.json
           curl --fail --silent --cookie /tmp/student.cookies http://127.0.0.1:8080/api/auth/me | grep -q "CSAI"
@@ -209,7 +243,7 @@ jobs:
           test "$experience_status" = "201"
 
           curl --fail --silent --cookie /tmp/student.cookies "http://127.0.0.1:8080/api/community/students/$student_id" | tee /tmp/community-student-profile.json
-          jq -e '.fullName == "Test Student Updated" and .department == "CSAI" and .graduationYear == 2028 and .discussionCount == 2 and .commentCount == 1 and (.skills | index("Java") != null) and (.experiencePosts | length == 1) and (.recentDiscussions | length == 1) and (has("email") | not)' /tmp/community-student-profile.json
+          jq -e '.fullName == "Test Student Updated" and .department == "CSAI" and .graduationYear == 2028 and .headline == "CSAI student | Java & React" and .location == "Lucknow, India" and .githubUrl == "https://github.com/test-student" and .projects == "InternMatch | Internship matching platform" and .achievements == "Completed a deployed full-stack project" and .connectionStatus == "SELF" and .discussionCount == 2 and .commentCount == 1 and (.skills | index("Java") != null) and (.experiencePosts | length == 1) and (.recentDiscussions | length == 1) and (has("email") | not)' /tmp/community-student-profile.json
 
           report_status=$(curl --silent --cookie /tmp/student.cookies --output /tmp/community-report.json --write-out "%{http_code}" \
             --request POST "http://127.0.0.1:8080/api/community/posts/$post_id/report" \
