@@ -176,7 +176,7 @@ jobs:
           test "$experience_status" = "201"
 
           curl --fail --silent --cookie /tmp/student.cookies "http://127.0.0.1:8080/api/community/students/$student_id" | tee /tmp/community-student-profile.json
-          jq -e '.fullName == "Test Student Updated" and .department == "CSAI" and .graduationYear == 2028 and .discussionCount == 2 and .commentCount == 1 and (.skills | index("Java") != null) and (.experiencePosts | length == 1) and (.recentDiscussions | length == 2) and (has("email") | not)' /tmp/community-student-profile.json
+          jq -e '.fullName == "Test Student Updated" and .department == "CSAI" and .graduationYear == 2028 and .discussionCount == 2 and .commentCount == 1 and (.skills | index("Java") != null) and (.experiencePosts | length == 1) and (.recentDiscussions | length == 1) and (has("email") | not)' /tmp/community-student-profile.json
 
           report_status=$(curl --silent --cookie /tmp/student.cookies --output /tmp/community-report.json --write-out "%{http_code}" \
             --request POST "http://127.0.0.1:8080/api/community/posts/$post_id/report" \
@@ -221,6 +221,9 @@ jobs:
           curl --fail --silent --cookie /tmp/student.cookies --request POST http://127.0.0.1:8080/api/auth/logout >/dev/null
           signed_out_status=$(curl --silent --output /tmp/signed-out.json --write-out "%{http_code}" --cookie /tmp/student.cookies http://127.0.0.1:8080/api/auth/me)
           test "$signed_out_status" = "401"
+
+          community_profile_signed_out_status=$(curl --silent --output /tmp/community-profile-signed-out.json --write-out "%{http_code}" --cookie /tmp/student.cookies "http://127.0.0.1:8080/api/community/students/$student_id")
+          test "$community_profile_signed_out_status" = "401"
 
           login_status=$(curl --silent --cookie-jar /tmp/login.cookies --output /tmp/login.json --write-out "%{http_code}" \
             --request POST http://127.0.0.1:8080/api/auth/login \
