@@ -547,6 +547,7 @@ function CommunityPage({ student }) {
   }
 
   const totalComments = posts.reduce((sum, post) => sum + Number(post.commentCount || 0), 0);
+  const myPosts = posts.filter((post) => post.authorStudentId === student.studentId);
   const postCountByCategory = posts.reduce((counts, post) => {
     counts[post.category] = (counts[post.category] || 0) + 1;
     return counts;
@@ -570,6 +571,30 @@ function CommunityPage({ student }) {
       {error && <div className="community-error" role="alert">{error}<button type="button" onClick={() => setError("")}>Dismiss</button></div>}
 
       <div className="community-layout">
+        <aside className="community-profile-rail">
+          <div className="community-rail-profile">
+            <div className="community-rail-cover"/>
+            <div className="community-rail-identity">
+              <button type="button" className="community-rail-avatar" onClick={() => openStudentProfile(student.studentId)}>{initials(student.fullName)}</button>
+              <h3>{student.fullName}</h3>
+              <p>{student.department || "Student"}{student.graduationYear ? ` · Class of ${student.graduationYear}` : ""}</p>
+              <span>Building skills. Finding opportunities.</span>
+            </div>
+            <div className="community-rail-stats">
+              <div><span>My discussions</span><b>{myPosts.length}</b></div>
+              <div><span>Replies in this feed</span><b>{totalComments}</b></div>
+            </div>
+            <button type="button" className="community-rail-view" onClick={() => openStudentProfile(student.studentId)}>View my community profile <span>→</span></button>
+          </div>
+          <div className="community-rail-topics">
+            <div className="community-rail-heading">EXPLORE TOPICS</div>
+            {COMMUNITY_CATEGORIES.map((item) => (
+              <button type="button" key={item.value} className={category === item.value ? "active" : ""} onClick={() => setCategory(item.value)}>
+                <span>{item.label}</span><b>{item.value === "ALL" ? posts.length : (postCountByCategory[item.value] || 0)}</b>
+              </button>
+            ))}
+          </div>
+        </aside>
         <main className="community-main">
           <button className="community-composer-trigger" type="button" onClick={openComposer}>
             <span className="community-trigger-avatar">{initials(student.fullName)}</span>
