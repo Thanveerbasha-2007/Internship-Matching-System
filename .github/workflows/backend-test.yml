@@ -87,6 +87,9 @@ jobs:
           unauthenticated_status=$(curl --silent --output /tmp/unauthenticated.json --write-out "%{http_code}" http://127.0.0.1:8080/api/students)
           test "$unauthenticated_status" = "401"
 
+          saved_unauthenticated_status=$(curl --silent --output /tmp/saved-unauthenticated.json --write-out "%{http_code}" http://127.0.0.1:8080/api/students/1/saved-internships)
+          test "$saved_unauthenticated_status" = "401"
+
           curl --fail --silent http://127.0.0.1:8080/api/auth/config | tee /tmp/auth-config.json
           grep -q '"googleClientId":""' /tmp/auth-config.json
 
@@ -115,6 +118,31 @@ jobs:
 
           owner_check_status=$(curl --silent --cookie /tmp/student.cookies --output /tmp/other-student.json --write-out "%{http_code}" http://127.0.0.1:8080/api/students/1)
           test "$owner_check_status" = "403"
+
+          curl --fail --silent --cookie /tmp/student.cookies "http://127.0.0.1:8080/api/students/$student_id/saved-internships" | tee /tmp/saved-empty.json
+          jq -e 'length == 0' /tmp/saved-empty.json
+
+          save_status=$(curl --silent --cookie /tmp/student.cookies --output /tmp/saved-response.json --write-out "%{http_code}" \
+            --request POST "http://127.0.0.1:8080/api/students/$student_id/saved-internships/1")
+          test "$save_status" = "200"
+          grep -q '"saved":true' /tmp/saved-response.json
+
+          curl --fail --silent --cookie /tmp/student.cookies "http://127.0.0.1:8080/api/students/$student_id/saved-internships" | tee /tmp/saved-list.json
+          jq -e 'index(1) != null' /tmp/saved-list.json
+
+          delete_status=$(curl --silent --cookie /tmp/student.cookies --output /tmp/unsaved-response.json --write-out "%{http_code}" \
+            --request DELETE "http://127.0.0.1:8080/api/students/$student_id/saved-internships/1")
+          test "$delete_status" = "200"
+          grep -q '"saved":false' /tmp/unsaved-response.json
+          curl --fail --silent --cookie /tmp/student.cookies "http://127.0.0.1:8080/api/students/$student_id/saved-internships" | jq -e 'length == 0'
+
+          update_status=$(curl --silent --cookie /tmp/student.cookies --output /tmp/profile-updated.json --write-out "%{http_code}" \
+            --request PUT "http://127.0.0.1:8080/api/students/$student_id" \
+            --header "Content-Type: application/json" \
+            --data '{"fullName":"Test Student Updated","department":"CSAI","graduationYear":2028,"skillIds":[1,2]}')
+          test "$update_status" = "200"
+          grep -q "Test Student Updated" /tmp/profile-updated.json
+          curl --fail --silent --cookie /tmp/student.cookies http://127.0.0.1:8080/api/auth/me | grep -q "CSAI"
 
       - name: Verify application submission and duplicate protection
         run: |
