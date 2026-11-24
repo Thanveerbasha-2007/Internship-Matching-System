@@ -12,6 +12,7 @@
 | Table | Responsibility |
 |---|---|
 | `students` | Stores each student's basic profile. |
+| `student_credentials` | Stores a BCrypt password hash for each registered student account. |
 | `skills` | Maintains a common catalogue of skills. |
 | `student_skills` | Connects students to the skills they possess. |
 | `internships` | Stores internship opportunity details. |
@@ -20,6 +21,7 @@
 
 ## Relationships
 
+- Each student account has one `student_credentials` row containing a password hash (never a plain-text password).
 - One student can have many entries in `student_skills`.
 - One skill can appear in many students' `student_skills` entries.
 - One internship can have many entries in `internship_skills`.
@@ -31,7 +33,7 @@
 ## Relationship overview
 
 ```text
-students 1 ---- many student_skills many ---- 1 skills
+students 1 ---- 1 student_credentials\n\nstudents 1 ---- many student_skills many ---- 1 skills
 
 internships 1 ---- many internship_skills many ---- 1 skills
 
@@ -45,7 +47,8 @@ students 1 ---- many applications many ---- 1 internships
 - Foreign keys maintain referential integrity.
 - Removing a student or internship that already has application records is restricted to avoid accidental loss of application history.
 - Skill matching can be built by comparing the skill IDs associated with a student and an internship. The exact ranking formula will be specified separately before implementation.
-- Authentication credentials, employer accounts, and administrative roles are not included in this first schema because those requirements have not yet been agreed.
+- Student passwords are hashed with BCrypt and stored separately from profile fields in `student_credentials`.
+- Employer accounts and administrative roles are not part of the current prototype.
 
 ## Create the database
 
