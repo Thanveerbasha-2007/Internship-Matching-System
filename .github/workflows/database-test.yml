@@ -68,6 +68,9 @@ jobs:
           students=$(mysql --protocol=TCP -h 127.0.0.1 -uroot --batch --skip-column-names -e "SELECT COUNT(*) FROM internship_matching.students")
           skills=$(mysql --protocol=TCP -h 127.0.0.1 -uroot --batch --skip-column-names -e "SELECT COUNT(*) FROM internship_matching.skills")
           internships=$(mysql --protocol=TCP -h 127.0.0.1 -uroot --batch --skip-column-names -e "SELECT COUNT(*) FROM internship_matching.internships")
+          community_tables=$(mysql --protocol=TCP -h 127.0.0.1 -uroot --batch --skip-column-names -e "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'internship_matching' AND table_name IN ('community_posts','community_comments','community_post_votes','community_reports')")
+          test "$community_tables" = "4"
+
 
           test "$students" = "4"
           test "$skills" = "10"
@@ -76,6 +79,7 @@ jobs:
           echo "Students: $students"
           echo "Skills: $skills"
           echo "Internships: $internships"
+          echo "Community tables: $community_tables"
 
       - name: Verify skill-matching overlap
         env:
