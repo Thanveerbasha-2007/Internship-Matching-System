@@ -88,6 +88,24 @@ jobs:
           grep -q "Backend Developer Intern" /tmp/internships.json
           grep -q "matchScore" /tmp/recommendations.json
 
+      - name: Verify application submission and duplicate protection
+        run: |
+          status=$(curl --silent --output /tmp/application.json --write-out "%{http_code}" \
+            --request POST http://127.0.0.1:8080/api/applications \
+            --header "Content-Type: application/json" \
+            --data '{"studentId":1,"internshipId":1}')
+          test "$status" = "201"
+          grep -q "Backend Developer Intern" /tmp/application.json
+
+          duplicate_status=$(curl --silent --output /tmp/duplicate.json --write-out "%{http_code}" \
+            --request POST http://127.0.0.1:8080/api/applications \
+            --header "Content-Type: application/json" \
+            --data '{"studentId":1,"internshipId":1}')
+          test "$duplicate_status" = "409"
+
+          curl --fail --silent http://127.0.0.1:8080/api/students/1/applications | tee /tmp/applications.json
+          grep -q "Backend Developer Intern" /tmp/applications.json
+
       - name: Stop Spring Boot process
         if: always()
         run: |
